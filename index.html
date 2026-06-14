@@ -127,6 +127,7 @@
                     <h3 class="font-semibold text-gray-700 mb-3">数据备份与同步</h3>
                     <button onclick="shareDataAirdrop()" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition mb-2 font-semibold">📲 发送到 iPhone（AirDrop）</button>
                     <p class="text-xs text-gray-500 mb-3">点击后选择 AirDrop → 你的 iPhone，在 iPhone 上用 Safari 打开，然后点「导入数据」即可同步</p>
+                    <button onclick="exportExcel()" class="w-full bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition mb-2">📊 导出 Excel 表格</button>
                     <button onclick="exportData()" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition mb-2">📥 导出数据（JSON 文件）</button>
                     <div class="relative"><input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)"><button onclick="document.getElementById('import-file').click()" class="w-full bg-yellow-600 text-white py-2 rounded-lg hover:bg-yellow-700 transition">📤 导入数据（JSON 文件）</button></div>
                 </div>
@@ -203,8 +204,8 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
-        // ==================== 工具函数 ====================
         function generateUUID() {
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
                 var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -775,6 +776,59 @@
             a.click();
             URL.revokeObjectURL(url);
             alert('数据已导出');
+        }
+
+        function exportExcel() {
+            if (typeof XLSX === 'undefined') { alert('Excel 库加载中，请稍后再试'); return; }
+            const data = getData();
+            const wb = XLSX.utils.book_new();
+
+            // Sheet1：支出明细
+            const expRows = [['项目名称','类型','日期','支出类目','金额','备注','已收票','已付款','已向制作方报销','路线']];
+            data.expenses.forEach(e => {
+                const p = data.projects.find(x=>x.id===e.project_id);
+                expRows.push([
+                    p ? p.name : '未知项目',
+                    p ? p.type+'类' : '',
+                    e.date,
+                    getCategoryLabel(e.category),
+                    e.amount,
+                    e.description || '',
+                    e.invoice_received ? '是' : '否',
+                    e.paid ? '是' : '否',
+                    e.reimbursed_from_vendor ? '是' : '否',
+                    e.transport_route || ''
+                ]);
+            });
+            const ws1 = XLSX.utils.aoa_to_sheet(expRows);
+            ws1['!cols'] = [{wch:20},{wch:6},{wch:12},{wch:12},{wch:10},{wch:20},{wch:8},{wch:8},{wch:14},{wch:30}];
+            XLSX.utils.book_append_sheet(wb, ws1, '支出明细');
+
+            // Sheet2：项目汇总
+            const sumRows = [['项目名称','类型','制作费预算','差旅预算','交通预算','总预算','制作费已用','差旅已用','交通已用','总已用','剩余','签约服务费','预计利润','待报销笔数']];
+            data.projects.filter(p=>!p.archived).forEach(p => {
+                const exps = data.expenses.filter(e=>e.project_id===p.id);
+                const prodUsed = exps.filter(e=>e.category==='production'||e.category==='travel_camera').reduce((s,e)=>s+e.amount,0);
+                const travelUsed = exps.filter(e=>e.category==='travel_cctv').reduce((s,e)=>s+e.amount,0);
+                const transUsed = exps.filter(e=>e.category==='transport').reduce((s,e)=>s+e.amount,0);
+                const totalBudget = p.budget_production+p.budget_travel_cctv+p.budget_transport;
+                const totalUsed = prodUsed+travelUsed+transUsed;
+                const profit = p.type==='A'&&p.contract_service_fee!==null ? totalBudget-p.contract_service_fee-totalUsed : null;
+                const pendingCount = exps.filter(e=>e.invoice_received&&e.paid&&!e.reimbursed_from_vendor).length;
+                sumRows.push([
+                    p.name, p.type+'类',
+                    p.budget_production, p.budget_travel_cctv, p.budget_transport, totalBudget,
+                    prodUsed, travelUsed, transUsed, totalUsed, totalBudget-totalUsed,
+                    p.contract_service_fee ?? '未填写',
+                    profit !== null ? profit : (p.type==='A' ? '待填签约服务费' : 'N/A'),
+                    p.type==='B' ? pendingCount : 'N/A'
+                ]);
+            });
+            const ws2 = XLSX.utils.aoa_to_sheet(sumRows);
+            ws2['!cols'] = [{wch:22},{wch:6},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12}];
+            XLSX.utils.book_append_sheet(wb, ws2, '项目汇总');
+
+            XLSX.writeFile(wb, `项目记账_${getToday()}.xlsx`);
         }
 
         function importData(event) {
