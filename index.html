@@ -73,11 +73,18 @@
                         </div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">金额 *</label><input type="text" id="entry-amount" required placeholder="0.00 或 120+80" onblur="evalAmount(this)" inputmode="decimal"></div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">备注</label><textarea id="entry-description" rows="2" placeholder="可选"></textarea></div>
-                        <div class="space-y-2">
+                        <!-- 默认状态字段（非交通费） -->
+                        <div id="status-default" class="space-y-2">
                             <label class="flex items-center"><input type="checkbox" id="entry-invoice" checked class="mr-2"><span class="text-sm">已收票</span></label>
                             <label class="flex items-center"><input type="checkbox" id="entry-paid" class="mr-2"><span class="text-sm">已付款</span></label>
                             <label class="flex items-center hidden" id="entry-reimbursed-vendor-label"><input type="checkbox" id="entry-reimbursed-vendor" class="mr-2"><span class="text-sm">已向制作方报销</span></label>
                             <label class="flex items-center hidden" id="entry-reimbursed-me-label"><input type="checkbox" id="entry-reimbursed-me" class="mr-2"><span class="text-sm">已报销给我</span></label>
+                        </div>
+                        <!-- 北京交通费专用状态字段（向公司报销） -->
+                        <div id="status-transport" class="space-y-2 hidden">
+                            <label class="flex items-center"><input type="checkbox" id="entry-transport-filed" class="mr-2"><span class="text-sm">已填报</span></label>
+                            <label class="flex items-center"><input type="checkbox" id="entry-transport-submitted" class="mr-2"><span class="text-sm">已提交</span></label>
+                            <label class="flex items-center"><input type="checkbox" id="entry-transport-reimbursed" class="mr-2"><span class="text-sm">已完成报销</span></label>
                         </div>
                         <div class="hidden" id="entry-route-container"><label class="block text-sm font-medium text-gray-700 mb-1">交通路线（起点→终点）</label><input type="text" id="entry-route" placeholder="例如：望海楼→融创亦庄壹号"></div>
                         <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition">提交录入</button>
@@ -543,24 +550,45 @@
         }
 
         function initEntryForm() {
-            const data = getData();
-            const sel = document.getElementById('entry-project');
-            sel.innerHTML = '<option value="">请选择项目</option>';
-            data.projects.filter(p=>!p.archived).forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name} (${p.type}类)</option>`; });
             document.getElementById('entry-date').value = getToday();
             updateEntryFormFields();
         }
 
+        function filterProjectsByCategory(cat) {
+            const data = getData();
+            const sel = document.getElementById('entry-project');
+            const prevVal = sel.value;
+            sel.innerHTML = '<option value="">请选择项目</option>';
+            data.projects.filter(p => {
+                if (p.archived) return false;
+                if (cat === 'transport') return p.budget_transport > 0;
+                return true;
+            }).forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name} (${p.type}类)</option>`; });
+            // 尝试保留之前选中的项目
+            if (prevVal && sel.querySelector(`option[value="${prevVal}"]`)) sel.value = prevVal;
+        }
+
         function updateEntryFormFields() {
+            const cat = document.querySelector('input[name="category"]:checked');
+            const catVal = cat ? cat.value : null;
+
+            // 过滤项目列表
+            filterProjectsByCategory(catVal);
+
             const pid = document.getElementById('entry-project').value;
             const data = getData();
             const p = data.projects.find(x=>x.id===pid);
-            document.getElementById('entry-reimbursed-vendor-label').classList.toggle('hidden', !p||p.type!=='B');
-            const cat = document.querySelector('input[name="category"]:checked');
-            if(cat) {
-                document.getElementById('entry-reimbursed-me-label').classList.toggle('hidden', cat.value!=='travel_camera');
-                document.getElementById('entry-route-container').classList.toggle('hidden', cat.value!=='transport');
+
+            // 切换状���勾选区域
+            const isTransport = catVal === 'transport';
+            document.getElementById('status-default').classList.toggle('hidden', isTransport);
+            document.getElementById('status-transport').classList.toggle('hidden', !isTransport);
+
+            if (!isTransport) {
+                document.getElementById('entry-reimbursed-vendor-label').classList.toggle('hidden', !p||p.type!=='B');
+                document.getElementById('entry-reimbursed-me-label').classList.toggle('hidden', catVal!=='travel_camera');
             }
+            document.getElementById('entry-route-container').classList.toggle('hidden', !isTransport);
         }
         document.querySelectorAll('input[name="category"]').forEach(r=>r.addEventListener('change',updateEntryFormFields));
 
@@ -571,18 +599,31 @@
             const cat = document.querySelector('input[name="category"]:checked').value;
             const amt = parseFloat(document.getElementById('entry-amount').value);
             const desc = document.getElementById('entry-description').value;
-            const inv = document.getElementById('entry-invoice').checked;
-            const paid = document.getElementById('entry-paid').checked;
             const data = getData();
             const p = data.projects.find(x=>x.id===pid);
-            const exp = {
-                id: generateUUID(), project_id: pid, category: cat, amount: amt, date: date, description: desc,
-                invoice_received: inv, paid: paid,
-                reimbursed_from_vendor: p.type==='B'?document.getElementById('entry-reimbursed-vendor').checked:false,
-                reimbursed_to_me: cat==='travel_camera'?document.getElementById('entry-reimbursed-me').checked:false,
-                transport_route: cat==='transport'?(document.getElementById('entry-route').value||null):null,
-                created_at: new Date().toISOString()
-            };
+            let exp;
+            if (cat === 'transport') {
+                exp = {
+                    id: generateUUID(), project_id: pid, category: cat, amount: amt, date: date, description: desc,
+                    transport_filed: document.getElementById('entry-transport-filed').checked,
+                    transport_submitted: document.getElementById('entry-transport-submitted').checked,
+                    transport_reimbursed: document.getElementById('entry-transport-reimbursed').checked,
+                    transport_route: document.getElementById('entry-route').value||null,
+                    // 兼容字段
+                    invoice_received: false, paid: false, reimbursed_from_vendor: false, reimbursed_to_me: false,
+                    created_at: new Date().toISOString()
+                };
+            } else {
+                exp = {
+                    id: generateUUID(), project_id: pid, category: cat, amount: amt, date: date, description: desc,
+                    invoice_received: document.getElementById('entry-invoice').checked,
+                    paid: document.getElementById('entry-paid').checked,
+                    reimbursed_from_vendor: p.type==='B'?document.getElementById('entry-reimbursed-vendor').checked:false,
+                    reimbursed_to_me: cat==='travel_camera'?document.getElementById('entry-reimbursed-me').checked:false,
+                    transport_route: null,
+                    created_at: new Date().toISOString()
+                };
+            }
             data.expenses.push(exp);
             saveData(data);
             document.getElementById('expense-form').reset();
