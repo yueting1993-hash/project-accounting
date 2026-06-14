@@ -48,7 +48,7 @@
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                     </button>
                     <h2 id="detail-project-name" class="text-xl font-bold">项目详情</h2>
-                    <div class="w-6"></div>
+                    <button onclick="currentProjectId=null;showPage('detail')" class="text-yellow-300 text-sm hover:text-yellow-100 font-semibold">⚠️ 预警</button>
                 </div>
             </div>
             <div class="p-4 space-y-4" id="detail-content"></div>
@@ -116,7 +116,10 @@
                     <h3 class="font-semibold text-gray-700">行程信息</h3>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">日期</label><input type="date" id="taxi-date" onchange="generateTaxiSuggestion()"></div>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">时间</label><input type="time" id="taxi-time" onchange="generateTaxiSuggestion()"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">预估金额</label><input type="text" id="taxi-amount" placeholder="0.00 或 120+80" onblur="evalAmount(this)" onchange="generateTaxiSuggestion()" inputmode="decimal"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">预估金额</label><input type="text" id="taxi-amount" placeholder="0.00 或 120+80" onblur="evalAmount(this)" onchange="generateTaxiSuggestion()" inputmode="decimal"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">里程（公里）</label><input type="number" id="taxi-mileage" placeholder="0.0" step="0.1" min="0" inputmode="decimal" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
+                    </div>
                 </div>
                 <div id="taxi-suggestion" class="bg-blue-50 p-4 rounded-lg space-y-3 hidden">
                     <h3 class="font-semibold text-blue-800">智能建议</h3>
@@ -132,6 +135,7 @@
                 <div class="bg-white border rounded-lg p-4">
                     <div class="flex justify-between items-center mb-3"><h3 class="font-semibold text-gray-700">常用路线记录</h3><button onclick="showAddRouteModal()" class="text-blue-600 text-sm hover:underline">+ 新增</button></div>
                     <div id="taxi-routes-list" class="space-y-2"></div>
+                    <button onclick="exportTaxiExcel()" class="w-full mt-3 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition text-sm">📊 导出打车数据 Excel</button>
                 </div>
             </div>
         </div>
@@ -694,8 +698,10 @@
             const transUsed = exps.filter(e=>e.category==='transport').reduce((s,e)=>s+e.amount,0);
             const cameraUsed = exps.filter(e=>e.category==='travel_camera').reduce((s,e)=>s+e.amount,0);
             const cameraReimbursed = exps.filter(e=>e.category==='travel_camera'&&e.reimbursed_to_me).reduce((s,e)=>s+e.amount,0);
+            const prodReimbursedToMe = exps.filter(e=>e.category==='production'&&e.reimbursed_to_me).reduce((s,e)=>s+e.amount,0);
+            const prodPendingToMe = prodUsed - prodReimbursedToMe;
 
-            contentEl.innerHTML += `<div class="bg-white border rounded-lg p-4 space-y-3"><h3 class="font-bold text-gray-700 mb-2">预算面板</h3>${renderBudgetItem('制作费',project.budget_production,prodUsed)}${project.budget_travel_cctv>0?renderBudgetItem('差旅（央视网）',project.budget_travel_cctv,travelCctvUsed):''}${project.budget_transport>0?renderBudgetItem('北京交通费',project.budget_transport,transUsed):''}<div class="pt-2 border-t"><div class="text-sm"><span class="font-medium">差旅（摄像团队）：</span></div><div class="grid grid-cols-3 gap-2 text-xs mt-1"><div>已垫付：<span class="text-red-600">${formatMoney(cameraUsed)}</span></div><div>已报销给我：<span class="text-green-600">${formatMoney(cameraReimbursed)}</span></div><div>待报销给我：<span class="text-orange-600">${formatMoney(cameraUsed-cameraReimbursed)}</span></div></div></div></div>`;
+            contentEl.innerHTML += `<div class="bg-white border rounded-lg p-4 space-y-3"><h3 class="font-bold text-gray-700 mb-2">预算面板</h3>${renderBudgetItem('制作费',project.budget_production,prodUsed)}<div class="grid grid-cols-3 gap-2 text-xs ml-1 mt-0"><div>已报销给我：<span class="text-green-600">${formatMoney(prodReimbursedToMe)}</span></div><div class="${prodPendingToMe>0?'text-orange-600 font-semibold':'text-gray-500'}">待报销给我：${formatMoney(prodPendingToMe)}</div></div>${project.budget_travel_cctv>0?renderBudgetItem('差旅（央视网）',project.budget_travel_cctv,travelCctvUsed):''}${project.budget_transport>0?renderBudgetItem('北京交通费',project.budget_transport,transUsed):''}<div class="pt-2 border-t"><div class="text-sm"><span class="font-medium">差旅（摄像团队）：</span></div><div class="grid grid-cols-3 gap-2 text-xs mt-1"><div>已垫付：<span class="text-red-600">${formatMoney(cameraUsed)}</span></div><div>已报销给我：<span class="text-green-600">${formatMoney(cameraReimbursed)}</span></div><div>待报销给我：<span class="text-orange-600">${formatMoney(cameraUsed-cameraReimbursed)}</span></div></div></div></div>`;
 
             if(project.type==='A') {
                 const totalExp = prodUsed+travelCctvUsed+transUsed;
@@ -800,7 +806,12 @@
 
             if (!isTransport && !isTravelCctv) {
                 document.getElementById('entry-reimbursed-vendor-label').classList.toggle('hidden', !p||p.type!=='B');
-                document.getElementById('entry-reimbursed-me-label').classList.toggle('hidden', catVal!=='travel_camera');
+                const showReimbMe = (catVal==='travel_camera' || catVal==='production');
+                document.getElementById('entry-reimbursed-me-label').classList.toggle('hidden', !showReimbMe);
+                // A类 production 默认勾选「已报销给我」，B类默认不勾
+                if (catVal === 'production') {
+                    document.getElementById('entry-reimbursed-me').checked = (p && p.type === 'A');
+                }
             }
             document.getElementById('entry-route-container').classList.toggle('hidden', !isTransport);
             // 切换类目时重置制作费日期框（非 production 类目隐藏）
@@ -863,7 +874,7 @@
                     paid_date: (cat === 'production' && document.getElementById('entry-paid').checked)
                         ? (document.getElementById('entry-paid-date').value || null) : null,
                     reimbursed_from_vendor: p.type==='B'?document.getElementById('entry-reimbursed-vendor').checked:false,
-                    reimbursed_to_me: cat==='travel_camera'?document.getElementById('entry-reimbursed-me').checked:false,
+                    reimbursed_to_me: (cat==='travel_camera'||cat==='production')?document.getElementById('entry-reimbursed-me').checked:false,
                     transport_route: null,
                     created_at: new Date().toISOString()
                 };
@@ -931,6 +942,7 @@
             const date = document.getElementById('taxi-date').value;
             const time = document.getElementById('taxi-time').value;
             const amt = parseFloat(document.getElementById('taxi-amount').value);
+            const mileage = parseFloat(document.getElementById('taxi-mileage').value) || 0;
             if(!pid||!date||!time||!amt) { alert('请填写完整信息'); return; }
             const route = document.getElementById('taxi-route-text').textContent;
             const reason = document.getElementById('taxi-reason-text').textContent;
@@ -938,11 +950,12 @@
             data.expenses.push({
                 id:generateUUID(), project_id:pid, category:'transport', amount:amt, date:date, description:reason,
                 invoice_received:true, paid:true, reimbursed_from_vendor:false, reimbursed_to_me:false,
-                transport_route:route, created_at:new Date().toISOString()
+                transport_route:route, mileage:mileage, created_at:new Date().toISOString()
             });
             saveData(data);
             alert('打车费用已录入！');
             document.getElementById('taxi-amount').value = '';
+            document.getElementById('taxi-mileage').value = '';
             document.getElementById('taxi-suggestion').classList.add('hidden');
         }
 
@@ -1127,6 +1140,28 @@
             XLSX.utils.book_append_sheet(wb, ws2, '项目汇总');
 
             XLSX.writeFile(wb, `项目记账_${getToday()}.xlsx`);
+        }
+
+        function exportTaxiExcel() {
+            if (typeof XLSX === 'undefined') { alert('Excel 库加载中，请稍后再试'); return; }
+            const data = getData();
+            const wb = XLSX.utils.book_new();
+            const rows = [['日期','项目','路线','里程(km)','金额','备注']];
+            data.expenses.filter(e => e.category === 'transport').sort((a,b)=>a.date.localeCompare(b.date)).forEach(e => {
+                const p = data.projects.find(x=>x.id===e.project_id);
+                rows.push([
+                    e.date,
+                    p ? p.name : '未知项目',
+                    e.transport_route || '',
+                    e.mileage || '',
+                    e.amount,
+                    e.description || ''
+                ]);
+            });
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            ws['!cols'] = [{wch:12},{wch:22},{wch:35},{wch:10},{wch:10},{wch:20}];
+            XLSX.utils.book_append_sheet(wb, ws, '打车记录');
+            XLSX.writeFile(wb, `打车记录_${getToday()}.xlsx`);
         }
 
         function importData(event) {
