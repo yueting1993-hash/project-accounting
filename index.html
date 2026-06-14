@@ -562,6 +562,7 @@
             data.projects.filter(p => {
                 if (p.archived) return false;
                 if (cat === 'transport') return p.budget_transport > 0;
+                if (cat === 'travel_cctv') return p.budget_travel_cctv > 0;
                 return true;
             }).forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name} (${p.type}类)</option>`; });
             // 尝试保留之前选中的项目
