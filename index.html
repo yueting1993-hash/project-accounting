@@ -136,6 +136,13 @@
                     <button onclick="confirmTaxiEntry()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition mt-2">确认录入</button>
                 </div>
                 <div class="bg-white border rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-3 cursor-pointer" onclick="toggleTaxiHistory()">
+                        <h3 class="font-semibold text-gray-700">📋 今日已录入记录（点击展开/收起）</h3>
+                        <span id="taxi-history-count" class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">0条</span>
+                    </div>
+                    <div id="taxi-history-panel" class="hidden space-y-2 max-h-64 overflow-y-auto"></div>
+                </div>
+                <div class="bg-white border rounded-lg p-4">
                     <div class="flex justify-between items-center mb-3"><h3 class="font-semibold text-gray-700">常用路线记录</h3><button onclick="showAddRouteModal()" class="text-blue-600 text-sm hover:underline">+ 新增</button></div>
                     <div id="taxi-routes-list" class="space-y-2"></div>
                     <button onclick="exportTaxiExcel()" class="w-full mt-3 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition text-sm">📊 导出打车数据 Excel</button>
@@ -891,6 +898,94 @@
             alert('录入成功！');
         }
 
+        // 以望海楼为中心的结构化路线数据库（里程：回家选项 / 公干选项）
+        const ROUTE_DATABASE = {
+            5: {
+                home: ['万柳书院', '蜂鸟家园', '光大花园', '碧水云天'],
+                work: ['中关村大厦', '海淀黄庄地铁站', '苏州街写字楼', '人民大学周边']
+            },
+            7: {
+                home: ['太阳园', '知春路小区', '北航家属院', '牡丹园小区'],
+                work: ['西直门凯德MALL', '北京动物园', '新街口商业区', '积水潭医院周边']
+            },
+            9: {
+                home: ['回龙观新村', '霍营小区', '立水桥小区', '天通苑一区'],
+                work: ['奥林匹克公园', '鸟巢/水立方', '亚运村商圈', '安贞桥周边']
+            },
+            11: {
+                home: ['清河万象汇附近', '上地佳园', '西二旗智学苑', '永丰基地宿舍'],
+                work: ['中关村软件园', '上地信息产业基地', '百度大厦', '腾讯北京总部']
+            },
+            13: {
+                home: ['沙河高教园', '昌平县城小区', '南邵地铁周边', '北七家社区'],
+                work: ['未来科学城', '昌平科技园', '小汤山温泉区', '顺义空港工业区']
+            },
+            15: {
+                home: ['亦庄线沿线小区', '旧宫新苑', '瀛海家园', '宋家庄周边'],
+                work: ['亦庄经济技术开发区', '京东总部', '北汽新能源', '同仁堂亦庄基地']
+            },
+            17: {
+                home: ['马驹桥小区', '通州北苑', '梨园小镇', '九棵树社区'],
+                work: ['通州万达广场', '环球影城周边', '运河商务区', '台湖演艺小镇']
+            },
+            19: {
+                home: ['朝阳大悦城附近', '青年路小区', '褡裢坡社区', '定福庄小区'],
+                work: ['朝阳公园', '蓝色港湾', '三里屯SOHO', '亮马桥外交区']
+            },
+            21: {
+                home: ['双井小区', '劲松社区', '潘家园小区', '十里河社区'],
+                work: ['国贸CBD', '中国尊', '银泰中心', '建外SOHO']
+            },
+            23: {
+                home: ['百子湾小区', '四惠东社区', '高碑店小区', '传媒大学周边'],
+                work: ['798艺术区', '酒仙桥电子城', '将台产业园', '颐堤港']
+            },
+            25: {
+                home: ['管庄小区', '常营小区', '草房社区', '物资学院周边'],
+                work: ['通州副中心', '运河核心区', '潞城行政办公区', '张家湾设计小镇']
+            },
+            27: {
+                home: ['大兴新城小区', '黄村社区', '义和庄小区', '天宫院社区'],
+                work: ['大兴国际机场周边', '生物医药基地', '新媒体产业基地', '西红门荟聚']
+            },
+            29: {
+                home: ['丰台科技园附近', '郭公庄小区', '白盆窑社区', '花乡小区'],
+                work: ['丰台总部基地', '世界公园', '丽泽商务区', '首科大厦']
+            },
+            31: {
+                home: ['石景山古城小区', '八角游乐园附近', '鲁谷社区', '衙门口小区'],
+                work: ['首钢园', '石景山万达', '苹果园交通枢纽', '模式口历史文化区']
+            },
+            33: {
+                home: ['门头沟城区小区', '永定镇社区', '龙泉镇小区', '大峪社区'],
+                work: ['门头沟新城', '中关村门头沟园', '戒台寺景区', '潭柘寺周边']
+            },
+            35: {
+                home: ['房山长阳小区', '良乡大学城附近', '阎村小区', '窦店社区'],
+                work: ['房山CSD', '良乡高教园区', '燕山石化区', '周口店遗址周边']
+            },
+            37: {
+                home: ['顺义后沙峪小区', '马坡新城', '牛栏山社区', '南法信社区'],
+                work: ['顺义新城', '首都机场临空经济区', '天竺综合保税区', '祥云小镇']
+            },
+            39: {
+                home: ['怀柔城区小区', '雁栖湖周边', '庙城镇社区', '北房镇小区'],
+                work: ['怀柔科学城', '雁栖湖国际会都', '慕田峪长城景区', '杨宋影视基地']
+            },
+            41: {
+                home: ['平谷城区小区', '马坊镇社区', '峪口镇小区', '金海湖周边'],
+                work: ['平谷工业园', '马坊物流基地', '金海湖度假区', '京东大峡谷']
+            },
+            43: {
+                home: ['密云城区小区', '檀营社区', '鼓楼街道小区', '果园小区'],
+                work: ['密云生态商务区', '云蒙山景区', '古北水镇', '司马台长城']
+            },
+            45: {
+                home: ['延庆城区小区', '康庄镇社区', '八达岭镇小区', '张山营社区'],
+                work: ['延庆冬奥园区', '八达岭长城', '世园会园区', '龙庆峡景区']
+            }
+        };
+
         // 北京市内常用地点库（基于规则和学习）
         const BEIJING_LOCATIONS = {
             office: ['望海楼（北京市海淀区西三环中路10号）'],
@@ -906,6 +1001,7 @@
             renderTaxiRoutes();
             updateTaxiProjectSelect();
             populateLocationSuggestions();
+            renderTaxiHistory(); // 初始化时渲染今日已录入记录
         }
 
         // 填充起点终点下拉建议
@@ -936,36 +1032,105 @@
             toList.innerHTML = toOptions.map(l => `<option value="${l}">`).join('');
         }
 
-        // 根据起点+里程智能推荐终点（误差1公里内）
+        // 根据里程+类型（回家/公干）从数据库推荐地点
+        function suggestByMileageAndType(mileage, type) {
+            if (!mileage || mileage <= 0) return null;
+            const keys = Object.keys(ROUTE_DATABASE).map(Number).sort((a,b) => a - b);
+            // 找到最接近的里程段（误差±1公里）
+            let closestKey = null;
+            for (const k of keys) {
+                if (Math.abs(k - mileage) <= 1.0) { closestKey = k; break; }
+            }
+            if (!closestKey) return null;
+            const segment = ROUTE_DATABASE[closestKey];
+            if (!segment) return null;
+            const options = type === 'home' ? segment.home : segment.work;
+            if (!options || options.length === 0) return null;
+            // 随机选择一个
+            return options[Math.floor(Math.random() * options.length)];
+        }
+
+        // 双向智能推荐：根据已知信息推断未知端
         function suggestDestinationByMileage() {
             const fromInput = document.getElementById('taxi-from').value.trim();
+            const toInput = document.getElementById('taxi-to').value.trim();
             const mileage = parseFloat(document.getElementById('taxi-mileage').value);
-            if (!fromInput || !mileage || mileage <= 0) return;
-
-            const data = getData();
-            // 从历史记录中查找匹配的路线
-            const matches = data.expenses.filter(e => 
-                e.category === 'transport' && 
-                e.transport_route && 
-                e.mileage
-            ).map(e => {
-                const parts = e.transport_route.split('→');
-                const routeFrom = parts[0] ? parts[0].trim() : '';
-                const routeTo = parts[1] ? parts[1].trim() : '';
-                return { from: routeFrom, to: routeTo, distance: e.mileage };
-            }).filter(r => 
-                r.from === fromInput && 
-                Math.abs(r.distance - mileage) <= 1.0
-            );
-
-            if (matches.length > 0) {
-                // 找到匹配路线，推荐第一个终点
-                const suggestedTo = matches[0].to;
-                document.getElementById('taxi-to').value = suggestedTo;
-                // 触发下拉列表更新
-                generateTaxiSuggestion();
+            const timeInput = document.getElementById('taxi-time').value;
+            
+            if (!mileage || mileage <= 0) return;
+            
+            const isWorkday = document.getElementById('taxi-is-workday').checked;
+            let isHomeTime = false;
+            if (timeInput && isWorkday) {
+                const [h, m] = timeInput.split(':').map(Number);
+                const tv = h * 60 + m;
+                isHomeTime = tv >= 20 * 60 + 30; // 工作日 20:30 后算回家时间
             }
-            // 如果没有匹配，用户可手动输入
+            
+            const type = isHomeTime ? 'home' : 'work';
+            
+            // 场景1：已知起点是望海楼 → 推荐终点
+            if (fromInput && fromInput.includes('望海楼') && !toInput) {
+                const suggested = suggestByMileageAndType(mileage, type);
+                if (suggested) {
+                    document.getElementById('taxi-to').value = suggested;
+                    generateTaxiSuggestion();
+                }
+            }
+            // 场景2：已知终点在数据库中 → 反推起点为望海楼
+            else if (toInput && !fromInput) {
+                // 检查终点是否在数据库的任何里程段中
+                let foundInDB = false;
+                for (const key in ROUTE_DATABASE) {
+                    const seg = ROUTE_DATABASE[key];
+                    if (seg.home.includes(toInput) || seg.work.includes(toInput)) {
+                        foundInDB = true;
+                        break;
+                    }
+                }
+                if (foundInDB) {
+                    document.getElementById('taxi-from').value = BEIJING_LOCATIONS.office[0];
+                    generateTaxiSuggestion();
+                }
+            }
+            // 场景3：已知起终点都不是望海楼，但里程匹配 → 不自动填充，让用户手动确认
+        }
+
+        // 切换今日已录入记录面板显示/隐藏
+        function toggleTaxiHistory() {
+            const panel = document.getElementById('taxi-history-panel');
+            panel.classList.toggle('hidden');
+        }
+
+        // 渲染今日已录入的打车记录
+        function renderTaxiHistory() {
+            const data = getData();
+            const today = getToday();
+            const todayRecords = data.expenses.filter(e => 
+                e.category === 'transport' && e.date === today
+            );
+            
+            const countEl = document.getElementById('taxi-history-count');
+            const panelEl = document.getElementById('taxi-history-panel');
+            
+            countEl.textContent = `${todayRecords.length}条`;
+            
+            if (todayRecords.length === 0) {
+                panelEl.innerHTML = '<div class="text-center text-gray-400 py-2 text-sm">今日暂无打车记录</div>';
+                return;
+            }
+            
+            panelEl.innerHTML = todayRecords.map(e => {
+                const p = data.projects.find(x => x.id === e.project_id);
+                return `<div class="border-l-2 border-blue-500 pl-3 py-1 text-sm">
+                    <div class="font-medium">${e.transport_route || '未填写路线'}</div>
+                    <div class="text-gray-600 text-xs mt-0.5">
+                        ${e.date} ${e.time || ''} | ${formatMoney(e.amount)}${e.mileage ? ' | ' + e.mileage + 'km' : ''}
+                        ${p ? ' | ' + p.name : ''}
+                    </div>
+                    ${e.taxi_note ? '<div class="text-gray-500 text-xs mt-0.5">' + e.taxi_note + '</div>' : ''}
+                </div>`;
+            }).join('');
         }
 
         function renderTaxiRoutes() {
@@ -1056,6 +1221,7 @@
             document.getElementById('taxi-mileage').value = '';
             document.getElementById('taxi-note').value = '';
             document.getElementById('taxi-suggestion').classList.add('hidden');
+            renderTaxiHistory(); // 录入成功后刷新今日记录面板
         }
 
         function showAddRouteModal() { document.getElementById('add-route-modal').classList.remove('hidden'); document.getElementById('add-route-modal').classList.add('flex'); }
