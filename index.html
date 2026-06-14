@@ -116,6 +116,8 @@
                     <h3 class="font-semibold text-gray-700">行程信息</h3>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">日期</label><input type="date" id="taxi-date" onchange="generateTaxiSuggestion()"></div>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">时间</label><input type="time" id="taxi-time" onchange="generateTaxiSuggestion()"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">起点</label><input type="text" id="taxi-from" placeholder="如：望海楼（公司）" list="taxi-from-list" onchange="generateTaxiSuggestion()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"><datalist id="taxi-from-list"></datalist></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">终点</label><input type="text" id="taxi-to" placeholder="如：融创亦庄壹号（家）" list="taxi-to-list" onchange="generateTaxiSuggestion()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"><datalist id="taxi-to-list"></datalist></div>
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">预估金额</label><input type="text" id="taxi-amount" placeholder="0.00 或 120+80" onblur="evalAmount(this)" onchange="generateTaxiSuggestion()" inputmode="decimal"></div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">里程（公里）</label><input type="number" id="taxi-mileage" placeholder="0.0" step="0.1" min="0" inputmode="decimal" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
@@ -888,10 +890,49 @@
             alert('录入成功！');
         }
 
+        // 北京市内常用地点库（基于规则和学习）
+        const BEIJING_LOCATIONS = {
+            office: ['望海楼（北京市海淀区西三环中路10号）'],
+            home: ['融创亦庄壹号', '金茂府（大兴区）', '中海寰宇天下'],
+            cultural_park: ['798艺术区', '首钢园', '郎园Station', '红砖美术馆'],
+            industrial_park: ['中关村软件园', '上地信息产业基地', '亦庄经济技术开发区', '酒仙桥电子城'],
+            building: ['国贸大厦', '中国尊', '银泰中心', '东方广场', '金融街中心'],
+            soe: ['中石油大厦', '中石化大厦', '国家电网总部', '中国移动大厦', '中国电信大厦']
+        };
+
         function initTaxiPage() {
             document.getElementById('taxi-date').value = getToday();
             renderTaxiRoutes();
             updateTaxiProjectSelect();
+            populateLocationSuggestions();
+        }
+
+        // 填充起点终点下拉建议
+        function populateLocationSuggestions() {
+            const fromList = document.getElementById('taxi-from-list');
+            const toList = document.getElementById('taxi-to-list');
+            if (!fromList || !toList) return;
+
+            // 起点：公司 + 常用出发地
+            let fromOptions = [...BEIJING_LOCATIONS.office];
+            const data = getData();
+            // 从历史打车记录中学习常用起点
+            const learnedFroms = new Set(data.expenses.filter(e => e.category === 'transport' && e.transport_route).map(e => {
+                const parts = e.transport_route.split('→');
+                return parts[0] ? parts[0].trim() : null;
+            }).filter(Boolean));
+            learnedFroms.forEach(loc => { if (!fromOptions.includes(loc)) fromOptions.push(loc); });
+
+            // 终点：家 + 文化园 + 产业园 + 大厦 + 央企 + 学习到的目的地
+            let toOptions = [...BEIJING_LOCATIONS.home, ...BEIJING_LOCATIONS.cultural_park, ...BEIJING_LOCATIONS.industrial_park, ...BEIJING_LOCATIONS.building, ...BEIJING_LOCATIONS.soe];
+            const learnedTos = new Set(data.expenses.filter(e => e.category === 'transport' && e.transport_route).map(e => {
+                const parts = e.transport_route.split('→');
+                return parts[1] ? parts[1].trim() : null;
+            }).filter(Boolean));
+            learnedTos.forEach(loc => { if (!toOptions.includes(loc)) toOptions.push(loc); });
+
+            fromList.innerHTML = fromOptions.map(l => `<option value="${l}">`).join('');
+            toList.innerHTML = toOptions.map(l => `<option value="${l}">`).join('');
         }
 
         function renderTaxiRoutes() {
@@ -922,15 +963,38 @@
             const ds = document.getElementById('taxi-date').value;
             const ts = document.getElementById('taxi-time').value;
             const wd = document.getElementById('taxi-is-workday').checked;
+            const fromInput = document.getElementById('taxi-from').value.trim();
+            const toInput = document.getElementById('taxi-to').value.trim();
             if(!ds||!ts) { document.getElementById('taxi-suggestion').classList.add('hidden'); return; }
             document.getElementById('taxi-suggestion').classList.remove('hidden');
             const [h,m] = ts.split(':').map(Number);
             const tv = h*60+m;
-            let rule,route,reason;
+            let rule, route, reason;
+
+            // 优先使用用户手动输入的起终点
+            let from = fromInput;
+            let to = toInput;
+
             if(wd) {
-                if(tv>=20*60+30) { rule='工作日 20:30后 - 加班回家'; route='望海楼（北京市海淀区西三环中路10号）→ 融创亦庄壹号'; reason='加班回家'; }
-                else { rule='工作日其他时段 - 外出办公'; route='望海楼（北京市海淀区西三环中路10号）→ [客户地址]'; reason='外出拜访/开会/前采'; }
-            } else { rule='周末/节假日'; route='[公司地址] → [目的地]'; reason='周末加班/紧急事务'; }
+                if(tv>=20*60+30) {
+                    rule='工作日 20:30后 - 加班回家';
+                    if (!from) from = BEIJING_LOCATIONS.office[0];
+                    if (!to) to = BEIJING_LOCATIONS.home[0];
+                    reason='加班回家';
+                } else {
+                    rule='工作日其他时段 - 外出办公';
+                    if (!from) from = BEIJING_LOCATIONS.office[0];
+                    if (!to) to = '[客户地址]';
+                    reason='外出拜访/开会/前采';
+                }
+            } else {
+                rule='周末/节假日';
+                if (!from) from = '[公司地址]';
+                if (!to) to = '[目的地]';
+                reason='周末加班/紧急事务';
+            }
+
+            route = `${from} → ${to}`;
             document.getElementById('taxi-rule-text').textContent = rule;
             document.getElementById('taxi-route-text').textContent = route;
             document.getElementById('taxi-reason-text').textContent = reason;
