@@ -75,8 +75,16 @@
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">备注</label><textarea id="entry-description" rows="2" placeholder="可选"></textarea></div>
                         <!-- 默认状态字段（非交通费） -->
                         <div id="status-default" class="space-y-2">
-                            <label class="flex items-center"><input type="checkbox" id="entry-invoice" checked class="mr-2"><span class="text-sm">已收票</span></label>
-                            <label class="flex items-center"><input type="checkbox" id="entry-paid" class="mr-2"><span class="text-sm">已付款</span></label>
+                            <div class="flex items-center flex-wrap gap-2">
+                                <label class="flex items-center"><input type="checkbox" id="entry-invoice" checked class="mr-2" onchange="onInvoiceChange()"><span class="text-sm">已收票</span></label>
+                                <input type="date" id="entry-expected-pay-date" class="hidden text-xs border border-gray-300 rounded px-2 py-1" title="预计付款日期">
+                                <span id="entry-expected-pay-label" class="hidden text-xs text-gray-400">预计付款日</span>
+                            </div>
+                            <div class="flex items-center flex-wrap gap-2">
+                                <label class="flex items-center"><input type="checkbox" id="entry-paid" class="mr-2" onchange="onPaidChange()"><span class="text-sm">已付款</span></label>
+                                <input type="date" id="entry-paid-date" class="hidden text-xs border border-gray-300 rounded px-2 py-1" title="实际付款日期">
+                                <span id="entry-paid-date-label" class="hidden text-xs text-gray-400">付款日期</span>
+                            </div>
                             <label class="flex items-center hidden" id="entry-reimbursed-vendor-label"><input type="checkbox" id="entry-reimbursed-vendor" class="mr-2"><span class="text-sm">已向制作方报销</span></label>
                             <label class="flex items-center hidden" id="entry-reimbursed-me-label"><input type="checkbox" id="entry-reimbursed-me" class="mr-2"><span class="text-sm">已报销给我</span></label>
                         </div>
@@ -242,6 +250,27 @@
                     }
                 } catch(e) { /* 表达式无效，不处理 */ }
             }
+        }
+
+        // 已收票勾选变化：显示/隐藏预计付款日期（仅制作费类目）
+        function onInvoiceChange() {
+            const isProduction = (document.querySelector('input[name="category"]:checked')?.value === 'production');
+            const checked = document.getElementById('entry-invoice').checked;
+            const show = isProduction && checked;
+            document.getElementById('entry-expected-pay-date').classList.toggle('hidden', !show);
+            document.getElementById('entry-expected-pay-label').classList.toggle('hidden', !show);
+        }
+
+        // 已付款勾选变化：显示/隐藏实际付款日期（仅制作费类目）
+        function onPaidChange() {
+            const isProduction = (document.querySelector('input[name="category"]:checked')?.value === 'production');
+            const checked = document.getElementById('entry-paid').checked;
+            const show = isProduction && checked;
+            const dateEl = document.getElementById('entry-paid-date');
+            const labelEl = document.getElementById('entry-paid-date-label');
+            dateEl.classList.toggle('hidden', !show);
+            labelEl.classList.toggle('hidden', !show);
+            if (show && !dateEl.value) dateEl.value = getToday(); // 默认今天
         }
 
         const STORAGE_KEY = 'project_accounting_v1';
@@ -410,6 +439,29 @@
 
         function renderOverview() {
             const data = getData();
+            // 到期未付款提醒
+            const today = getToday();
+            const overdue = data.expenses.filter(e =>
+                e.category === 'production' && e.invoice_received && !e.paid &&
+                e.expected_pay_date && e.expected_pay_date <= today
+            );
+            let bannerEl = document.getElementById('overdue-banner');
+            if (!bannerEl) {
+                bannerEl = document.createElement('div');
+                bannerEl.id = 'overdue-banner';
+                bannerEl.className = 'mx-4 mt-3 p-3 bg-red-50 border border-red-300 rounded-lg text-sm text-red-800 hidden';
+                document.getElementById('page-overview').querySelector('.p-4').prepend(bannerEl);
+            }
+            if (overdue.length > 0) {
+                const lines = overdue.map(e => {
+                    const p = data.projects.find(x => x.id === e.project_id);
+                    return `• ${p ? p.name : '未知项目'}：应付 ${e.expected_pay_date}，${formatMoney(e.amount)}`;
+                }).join('<br>');
+                bannerEl.innerHTML = `⚠️ <strong>制作费到期未付款（${overdue.length}笔）</strong><br>${lines}`;
+                bannerEl.classList.remove('hidden');
+            } else {
+                bannerEl.classList.add('hidden');
+            }
             const activeProjects = data.projects.filter(p=>!p.archived);
             let totalBudget=0, totalUsed=0;
             activeProjects.forEach(project => {
@@ -599,6 +651,15 @@
                 document.getElementById('entry-reimbursed-me-label').classList.toggle('hidden', catVal!=='travel_camera');
             }
             document.getElementById('entry-route-container').classList.toggle('hidden', !isTransport);
+            // 切换类目时重置制作费日期框（非 production 类目隐藏）
+            const isProduction = catVal === 'production';
+            if (!isProduction) {
+                ['entry-expected-pay-date','entry-expected-pay-label','entry-paid-date','entry-paid-date-label'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            } else {
+                // production 时，根据勾选状态决定是否显示
+                onInvoiceChange();
+                onPaidChange();
+            }
         }
         document.querySelectorAll('input[name="category"]').forEach(r=>r.addEventListener('change',updateEntryFormFields));
 
@@ -637,6 +698,10 @@
                     id: generateUUID(), project_id: pid, category: cat, amount: amt, date: date, description: desc,
                     invoice_received: document.getElementById('entry-invoice').checked,
                     paid: document.getElementById('entry-paid').checked,
+                    expected_pay_date: (cat === 'production' && document.getElementById('entry-invoice').checked)
+                        ? (document.getElementById('entry-expected-pay-date').value || null) : null,
+                    paid_date: (cat === 'production' && document.getElementById('entry-paid').checked)
+                        ? (document.getElementById('entry-paid-date').value || null) : null,
                     reimbursed_from_vendor: p.type==='B'?document.getElementById('entry-reimbursed-vendor').checked:false,
                     reimbursed_to_me: cat==='travel_camera'?document.getElementById('entry-reimbursed-me').checked:false,
                     transport_route: null,
