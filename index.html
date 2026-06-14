@@ -71,7 +71,7 @@
                                 <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="category" value="transport" class="mr-2"><span class="text-sm">北京交通费</span></label>
                             </div>
                         </div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">金额 *</label><input type="number" id="entry-amount" step="0.01" min="0" required placeholder="0.00"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">金额 *</label><input type="text" id="entry-amount" required placeholder="0.00 或 120+80" onblur="evalAmount(this)" inputmode="decimal"></div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">备注</label><textarea id="entry-description" rows="2" placeholder="可选"></textarea></div>
                         <div class="space-y-2">
                             <label class="flex items-center"><input type="checkbox" id="entry-invoice" checked class="mr-2"><span class="text-sm">已收票</span></label>
@@ -94,7 +94,7 @@
                     <h3 class="font-semibold text-gray-700">行程信息</h3>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">日期</label><input type="date" id="taxi-date" onchange="generateTaxiSuggestion()"></div>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">时间</label><input type="time" id="taxi-time" onchange="generateTaxiSuggestion()"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">预估金额</label><input type="number" id="taxi-amount" step="0.01" min="0" placeholder="0.00" onchange="generateTaxiSuggestion()"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">预估金额</label><input type="text" id="taxi-amount" placeholder="0.00 或 120+80" onblur="evalAmount(this)" onchange="generateTaxiSuggestion()" inputmode="decimal"></div>
                 </div>
                 <div id="taxi-suggestion" class="bg-blue-50 p-4 rounded-lg space-y-3 hidden">
                     <h3 class="font-semibold text-blue-800">智能建议</h3>
@@ -216,6 +216,19 @@
         function getToday() { return new Date().toISOString().split('T')[0]; }
         function getCategoryLabel(c) { return {'production':'制作费','travel_cctv':'差旅央视网','travel_camera':'差旅摄像团队','transport':'北京交通费'}[c]||c; }
         function getCategoryIcon(c) { return {'production':'🎬','travel_cctv':'✈️','travel_camera':'📷','transport':'🚗'}[c]||'💰'; }
+        function evalAmount(input) {
+            const raw = input.value.trim();
+            if (!raw) return;
+            // 只允许数字、小数点、加减乘除、括号、空格，防止代码注入
+            if (/^[\d\s\+\-\*\/\.\(\)]+$/.test(raw)) {
+                try {
+                    const result = Function('"use strict"; return (' + raw + ')')();
+                    if (typeof result === 'number' && isFinite(result) && result >= 0) {
+                        input.value = parseFloat(result.toFixed(2));
+                    }
+                } catch(e) { /* 表达式无效，不处理 */ }
+            }
+        }
 
         const STORAGE_KEY = 'project_accounting_v1';
         const INITIAL_PROJECTS = [
