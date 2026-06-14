@@ -120,7 +120,7 @@
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">终点</label><input type="text" id="taxi-to" placeholder="如：融创亦庄壹号（家）" list="taxi-to-list" onchange="generateTaxiSuggestion()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"><datalist id="taxi-to-list"></datalist></div>
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">预估金额</label><input type="text" id="taxi-amount" placeholder="0.00 或 120+80" onblur="evalAmount(this)" onchange="generateTaxiSuggestion()" inputmode="decimal"></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">里程（公里）</label><input type="number" id="taxi-mileage" placeholder="0.0" step="0.1" min="0" inputmode="decimal" onchange="suggestDestinationByMileage()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">里程（公里）</label><input type="number" id="taxi-mileage" placeholder="0.0" step="0.1" min="0" inputmode="decimal" oninput="suggestDestinationByMileage()" onchange="suggestDestinationByMileage()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
                     </div>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">备注（详细理由）</label><textarea id="taxi-note" placeholder="例如：拜访客户张三，讨论Q3合作方案" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea></div>
                 </div>
@@ -130,6 +130,10 @@
                         <div><span class="font-medium">规则判断：</span><span id="taxi-rule-text"></span></div>
                         <div><span class="font-medium">推荐路线：</span><span id="taxi-route-text"></span></div>
                         <div><span class="font-medium">报销理由：</span><span id="taxi-reason-text"></span></div>
+                        <div id="taxi-candidates-container" class="hidden">
+                            <div class="font-medium mb-1">推荐地点（点击选择）：</div>
+                            <div id="taxi-candidates" class="flex flex-wrap gap-2"></div>
+                        </div>
                         <div><span class="font-medium">推荐分配项目：</span><select id="taxi-project-select" class="mt-1 w-full"><option value="">请选择项目</option></select></div>
                     </div>
                     <div class="pt-2"><label class="flex items-center"><input type="checkbox" id="taxi-is-workday" checked class="mr-2" onchange="generateTaxiSuggestion()"><span class="text-sm">视为工作日（可手动调整）</span></label></div>
@@ -137,7 +141,7 @@
                 </div>
                 <div class="bg-white border rounded-lg p-4">
                     <div class="flex justify-between items-center mb-3 cursor-pointer" onclick="toggleTaxiHistory()">
-                        <h3 class="font-semibold text-gray-700">📋 今日已录入记录（点击展开/收起）</h3>
+                        <h3 class="font-semibold text-gray-700">📋 全部打车记录（点击展开/收起）</h3>
                         <span id="taxi-history-count" class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">0条</span>
                     </div>
                     <div id="taxi-history-panel" class="hidden space-y-2 max-h-64 overflow-y-auto"></div>
@@ -1034,20 +1038,40 @@
 
         // 根据里程+类型（回家/公干）从数据库推荐地点
         function suggestByMileageAndType(mileage, type) {
-            if (!mileage || mileage <= 0) return null;
+            if (!mileage || mileage <= 0) return [];
             const keys = Object.keys(ROUTE_DATABASE).map(Number).sort((a,b) => a - b);
-            // 找到最接近的里程段（误差±1公里）
-            let closestKey = null;
+            // 找最接近的里程段（优先精确匹配，其次±2公里内最近）
+            let closestKey = null, minDiff = Infinity;
             for (const k of keys) {
-                if (Math.abs(k - mileage) <= 1.0) { closestKey = k; break; }
+                const diff = Math.abs(k - mileage);
+                if (diff < minDiff) { minDiff = diff; closestKey = k; }
             }
-            if (!closestKey) return null;
+            if (closestKey === null || minDiff > 5) return []; // 误差超过5km则不推荐
             const segment = ROUTE_DATABASE[closestKey];
-            if (!segment) return null;
-            const options = type === 'home' ? segment.home : segment.work;
-            if (!options || options.length === 0) return null;
-            // 随机选择一个
-            return options[Math.floor(Math.random() * options.length)];
+            if (!segment) return [];
+            return type === 'home' ? segment.home : segment.work;
+        }
+
+        // 渲染候选地点按钮（供用户点击选择）
+        function renderCandidates(candidates, targetField) {
+            const container = document.getElementById('taxi-candidates-container');
+            const listEl = document.getElementById('taxi-candidates');
+            if (!candidates || candidates.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+            listEl.innerHTML = candidates.map(name =>
+                `<button type="button" onclick="selectCandidate('${name.replace(/'/g,"\\'")}','${targetField}')"
+                    class="px-3 py-1 text-xs rounded-full border border-blue-400 text-blue-700 bg-white hover:bg-blue-100 transition">${name}</button>`
+            ).join('');
+        }
+
+        // 点击候选地点后填入对应字段并刷新建议
+        function selectCandidate(name, field) {
+            document.getElementById(field).value = name;
+            document.getElementById('taxi-candidates-container').classList.add('hidden');
+            generateTaxiSuggestion();
         }
 
         // 双向智能推荐：根据已知信息推断未知端
@@ -1067,22 +1091,22 @@
                 isHomeTime = (h * 60 + m) >= 20 * 60 + 30;
             }
             const type = isHomeTime ? 'home' : 'work';
-            const OFFICE = BEIJING_LOCATIONS.office[0]; // 望海楼全称
+            const OFFICE = BEIJING_LOCATIONS.office[0];
 
-            // 场景A：起点=望海楼，终点为空 → 推荐终点（去哪）
+            // 场景A：起点=望海楼，终点为空 → 推荐终点候选列表
             if (fromInput.includes('望海楼') && !toInput) {
-                const suggested = suggestByMileageAndType(mileage, type);
-                if (suggested) {
-                    document.getElementById('taxi-to').value = suggested;
+                const candidates = suggestByMileageAndType(mileage, type);
+                if (candidates.length > 0) {
                     generateTaxiSuggestion();
+                    renderCandidates(candidates, 'taxi-to');
                 }
             }
-            // 场景B：终点=望海楼，起点为空 → 推荐起点（从哪来）
+            // 场景B：终点=望海楼，起点为空 → 推荐起点候选列表
             else if (toInput.includes('望海楼') && !fromInput) {
-                const suggested = suggestByMileageAndType(mileage, type);
-                if (suggested) {
-                    document.getElementById('taxi-from').value = suggested;
+                const candidates = suggestByMileageAndType(mileage, type);
+                if (candidates.length > 0) {
                     generateTaxiSuggestion();
+                    renderCandidates(candidates, 'taxi-from');
                 }
             }
             // 场景C：终点在数据库中，起点为空 → 起点=望海楼
@@ -1109,6 +1133,14 @@
                     generateTaxiSuggestion();
                 }
             }
+            // 场景E：起终点都为空，仅有里程 → 展示候选列表供选择
+            else if (!fromInput && !toInput) {
+                const candidates = suggestByMileageAndType(mileage, type);
+                if (candidates.length > 0) {
+                    generateTaxiSuggestion();
+                    renderCandidates(candidates, 'taxi-to');
+                }
+            }
         }
 
         // 切换今日已录入记录面板显示/隐藏
@@ -1117,25 +1149,23 @@
             panel.classList.toggle('hidden');
         }
 
-        // 渲染今日已录入的打车记录
+        // 渲染全部打车记录
         function renderTaxiHistory() {
             const data = getData();
-            const today = getToday();
-            const todayRecords = data.expenses.filter(e => 
-                e.category === 'transport' && e.date === today
-            );
+            const allRecords = data.expenses.filter(e => e.category === 'transport')
+                .sort((a, b) => (b.date + (b.time||'')).localeCompare(a.date + (a.time||'')));
             
             const countEl = document.getElementById('taxi-history-count');
             const panelEl = document.getElementById('taxi-history-panel');
             
-            countEl.textContent = `${todayRecords.length}条`;
+            countEl.textContent = `${allRecords.length}条`;
             
-            if (todayRecords.length === 0) {
-                panelEl.innerHTML = '<div class="text-center text-gray-400 py-2 text-sm">今日暂无打车记录</div>';
+            if (allRecords.length === 0) {
+                panelEl.innerHTML = '<div class="text-center text-gray-400 py-2 text-sm">暂无打车记录</div>';
                 return;
             }
             
-            panelEl.innerHTML = todayRecords.map(e => {
+            panelEl.innerHTML = allRecords.map(e => {
                 const p = data.projects.find(x => x.id === e.project_id);
                 return `<div class="border-l-2 border-blue-500 pl-3 py-1 text-sm">
                     <div class="font-medium">${e.transport_route || '未填写路线'}</div>
