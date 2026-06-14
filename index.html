@@ -80,6 +80,13 @@
                             <label class="flex items-center hidden" id="entry-reimbursed-vendor-label"><input type="checkbox" id="entry-reimbursed-vendor" class="mr-2"><span class="text-sm">已向制作方报销</span></label>
                             <label class="flex items-center hidden" id="entry-reimbursed-me-label"><input type="checkbox" id="entry-reimbursed-me" class="mr-2"><span class="text-sm">已报销给我</span></label>
                         </div>
+                        <!-- 差旅央视网专用状态字段（向公司报销） -->
+                        <div id="status-travel-cctv" class="space-y-2 hidden">
+                            <label class="flex items-center"><input type="checkbox" id="entry-cctv-invoice" class="mr-2"><span class="text-sm">已收票</span></label>
+                            <label class="flex items-center"><input type="checkbox" id="entry-cctv-filed" class="mr-2"><span class="text-sm">已填报</span></label>
+                            <label class="flex items-center"><input type="checkbox" id="entry-cctv-submitted" class="mr-2"><span class="text-sm">已提交</span></label>
+                            <label class="flex items-center"><input type="checkbox" id="entry-cctv-reimbursed" class="mr-2"><span class="text-sm">已完成报销</span></label>
+                        </div>
                         <!-- 北京交通费专用状态字段（向公司报销） -->
                         <div id="status-transport" class="space-y-2 hidden">
                             <label class="flex items-center"><input type="checkbox" id="entry-transport-filed" class="mr-2"><span class="text-sm">已填报</span></label>
@@ -580,12 +587,14 @@
             const data = getData();
             const p = data.projects.find(x=>x.id===pid);
 
-            // 切换状���勾选区域
+            // 切换状态勾选区域
             const isTransport = catVal === 'transport';
-            document.getElementById('status-default').classList.toggle('hidden', isTransport);
+            const isTravelCctv = catVal === 'travel_cctv';
+            document.getElementById('status-default').classList.toggle('hidden', isTransport || isTravelCctv);
+            document.getElementById('status-travel-cctv').classList.toggle('hidden', !isTravelCctv);
             document.getElementById('status-transport').classList.toggle('hidden', !isTransport);
 
-            if (!isTransport) {
+            if (!isTransport && !isTravelCctv) {
                 document.getElementById('entry-reimbursed-vendor-label').classList.toggle('hidden', !p||p.type!=='B');
                 document.getElementById('entry-reimbursed-me-label').classList.toggle('hidden', catVal!=='travel_camera');
             }
@@ -610,9 +619,18 @@
                     transport_submitted: document.getElementById('entry-transport-submitted').checked,
                     transport_reimbursed: document.getElementById('entry-transport-reimbursed').checked,
                     transport_route: document.getElementById('entry-route').value||null,
-                    // 兼容字段
                     invoice_received: false, paid: false, reimbursed_from_vendor: false, reimbursed_to_me: false,
                     created_at: new Date().toISOString()
+                };
+            } else if (cat === 'travel_cctv') {
+                exp = {
+                    id: generateUUID(), project_id: pid, category: cat, amount: amt, date: date, description: desc,
+                    cctv_invoice: document.getElementById('entry-cctv-invoice').checked,
+                    cctv_filed: document.getElementById('entry-cctv-filed').checked,
+                    cctv_submitted: document.getElementById('entry-cctv-submitted').checked,
+                    cctv_reimbursed: document.getElementById('entry-cctv-reimbursed').checked,
+                    invoice_received: false, paid: false, reimbursed_from_vendor: false, reimbursed_to_me: false,
+                    transport_route: null, created_at: new Date().toISOString()
                 };
             } else {
                 exp = {
