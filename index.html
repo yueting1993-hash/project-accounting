@@ -1058,42 +1058,57 @@
             const timeInput = document.getElementById('taxi-time').value;
             
             if (!mileage || mileage <= 0) return;
-            
+
+            // 判断是回家还是公干
             const isWorkday = document.getElementById('taxi-is-workday').checked;
             let isHomeTime = false;
             if (timeInput && isWorkday) {
                 const [h, m] = timeInput.split(':').map(Number);
-                const tv = h * 60 + m;
-                isHomeTime = tv >= 20 * 60 + 30; // 工作日 20:30 后算回家时间
+                isHomeTime = (h * 60 + m) >= 20 * 60 + 30;
             }
-            
             const type = isHomeTime ? 'home' : 'work';
-            
-            // 场景1：已知起点是望海楼 → 推荐终点
-            if (fromInput && fromInput.includes('望海楼') && !toInput) {
+            const OFFICE = BEIJING_LOCATIONS.office[0]; // 望海楼全称
+
+            // 场景A：起点=望海楼，终点为空 → 推荐终点（去哪）
+            if (fromInput.includes('望海楼') && !toInput) {
                 const suggested = suggestByMileageAndType(mileage, type);
                 if (suggested) {
                     document.getElementById('taxi-to').value = suggested;
                     generateTaxiSuggestion();
                 }
             }
-            // 场景2：已知终点在数据库中 → 反推起点为望海楼
-            else if (toInput && !fromInput) {
-                // 检查终点是否在数据库的任何里程段中
-                let foundInDB = false;
-                for (const key in ROUTE_DATABASE) {
-                    const seg = ROUTE_DATABASE[key];
-                    if (seg.home.includes(toInput) || seg.work.includes(toInput)) {
-                        foundInDB = true;
-                        break;
-                    }
-                }
-                if (foundInDB) {
-                    document.getElementById('taxi-from').value = BEIJING_LOCATIONS.office[0];
+            // 场景B：终点=望海楼，起点为空 → 推荐起点（从哪来）
+            else if (toInput.includes('望海楼') && !fromInput) {
+                const suggested = suggestByMileageAndType(mileage, type);
+                if (suggested) {
+                    document.getElementById('taxi-from').value = suggested;
                     generateTaxiSuggestion();
                 }
             }
-            // 场景3：已知起终点都不是望海楼，但里程匹配 → 不自动填充，让用户手动确认
+            // 场景C：终点在数据库中，起点为空 → 起点=望海楼
+            else if (toInput && !fromInput) {
+                let foundInDB = false;
+                for (const key in ROUTE_DATABASE) {
+                    const seg = ROUTE_DATABASE[key];
+                    if (seg.home.includes(toInput) || seg.work.includes(toInput)) { foundInDB = true; break; }
+                }
+                if (foundInDB) {
+                    document.getElementById('taxi-from').value = OFFICE;
+                    generateTaxiSuggestion();
+                }
+            }
+            // 场景D：起点在数据库中，终点为空 → 终点=望海楼
+            else if (fromInput && !toInput) {
+                let foundInDB = false;
+                for (const key in ROUTE_DATABASE) {
+                    const seg = ROUTE_DATABASE[key];
+                    if (seg.home.includes(fromInput) || seg.work.includes(fromInput)) { foundInDB = true; break; }
+                }
+                if (foundInDB) {
+                    document.getElementById('taxi-to').value = OFFICE;
+                    generateTaxiSuggestion();
+                }
+            }
         }
 
         // 切换今日已录入记录面板显示/隐藏
@@ -1172,23 +1187,28 @@
             // 优先使用用户手动输入的起终点
             let from = fromInput;
             let to = toInput;
+            const OFFICE = BEIJING_LOCATIONS.office[0];
+
+            // 判断方向：终点是望海楼=回程，起点是望海楼=出发
+            const toIsOffice = to.includes('望海楼');
+            const fromIsOffice = from.includes('望海楼');
 
             if(wd) {
                 if(tv>=20*60+30) {
                     rule='工作日 20:30后 - 加班回家';
-                    if (!from) from = BEIJING_LOCATIONS.office[0];
-                    if (!to) to = BEIJING_LOCATIONS.home[0];
+                    if (!from) from = toIsOffice ? '[出发地]' : OFFICE;
+                    if (!to) to = fromIsOffice ? '[回家地址]' : OFFICE;
                     reason='加班回家';
                 } else {
                     rule='工作日其他时段 - 外出办公';
-                    if (!from) from = BEIJING_LOCATIONS.office[0];
-                    if (!to) to = '[客户地址]';
+                    if (!from) from = toIsOffice ? '[出发地]' : OFFICE;
+                    if (!to) to = fromIsOffice ? '[目的地]' : OFFICE;
                     reason='外出拜访/开会/前采';
                 }
             } else {
                 rule='周末/节假日';
-                if (!from) from = '[公司地址]';
-                if (!to) to = '[目的地]';
+                if (!from) from = toIsOffice ? '[出发地]' : '[公司地址]';
+                if (!to) to = fromIsOffice ? '[目的地]' : '[公司地址]';
                 reason='周末加班/紧急事务';
             }
 
