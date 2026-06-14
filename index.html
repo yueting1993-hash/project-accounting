@@ -120,8 +120,9 @@
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">终点</label><input type="text" id="taxi-to" placeholder="如：融创亦庄壹号（家）" list="taxi-to-list" onchange="generateTaxiSuggestion()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"><datalist id="taxi-to-list"></datalist></div>
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">预估金额</label><input type="text" id="taxi-amount" placeholder="0.00 或 120+80" onblur="evalAmount(this)" onchange="generateTaxiSuggestion()" inputmode="decimal"></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">里程（公里）</label><input type="number" id="taxi-mileage" placeholder="0.0" step="0.1" min="0" inputmode="decimal" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">里程（公里）</label><input type="number" id="taxi-mileage" placeholder="0.0" step="0.1" min="0" inputmode="decimal" onchange="suggestDestinationByMileage()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
                     </div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">备注（详细理由）</label><textarea id="taxi-note" placeholder="例如：拜访客户张三，讨论Q3合作方案" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea></div>
                 </div>
                 <div id="taxi-suggestion" class="bg-blue-50 p-4 rounded-lg space-y-3 hidden">
                     <h3 class="font-semibold text-blue-800">智能建议</h3>
@@ -935,6 +936,38 @@
             toList.innerHTML = toOptions.map(l => `<option value="${l}">`).join('');
         }
 
+        // 根据起点+里程智能推荐终点（误差1公里内）
+        function suggestDestinationByMileage() {
+            const fromInput = document.getElementById('taxi-from').value.trim();
+            const mileage = parseFloat(document.getElementById('taxi-mileage').value);
+            if (!fromInput || !mileage || mileage <= 0) return;
+
+            const data = getData();
+            // 从历史记录中查找匹配的路线
+            const matches = data.expenses.filter(e => 
+                e.category === 'transport' && 
+                e.transport_route && 
+                e.mileage
+            ).map(e => {
+                const parts = e.transport_route.split('→');
+                const routeFrom = parts[0] ? parts[0].trim() : '';
+                const routeTo = parts[1] ? parts[1].trim() : '';
+                return { from: routeFrom, to: routeTo, distance: e.mileage };
+            }).filter(r => 
+                r.from === fromInput && 
+                Math.abs(r.distance - mileage) <= 1.0
+            );
+
+            if (matches.length > 0) {
+                // 找到匹配路线，推荐第一个终点
+                const suggestedTo = matches[0].to;
+                document.getElementById('taxi-to').value = suggestedTo;
+                // 触发下拉列表更新
+                generateTaxiSuggestion();
+            }
+            // 如果没有匹配，用户可手动输入
+        }
+
         function renderTaxiRoutes() {
             const data = getData();
             const el = document.getElementById('taxi-routes-list');
@@ -1007,6 +1040,7 @@
             const time = document.getElementById('taxi-time').value;
             const amt = parseFloat(document.getElementById('taxi-amount').value);
             const mileage = parseFloat(document.getElementById('taxi-mileage').value) || 0;
+            const note = document.getElementById('taxi-note').value.trim();
             if(!pid||!date||!time||!amt) { alert('请填写完整信息'); return; }
             const route = document.getElementById('taxi-route-text').textContent;
             const reason = document.getElementById('taxi-reason-text').textContent;
@@ -1014,12 +1048,13 @@
             data.expenses.push({
                 id:generateUUID(), project_id:pid, category:'transport', amount:amt, date:date, description:reason,
                 invoice_received:true, paid:true, reimbursed_from_vendor:false, reimbursed_to_me:false,
-                transport_route:route, mileage:mileage, created_at:new Date().toISOString()
+                transport_route:route, mileage:mileage, taxi_note:note, created_at:new Date().toISOString()
             });
             saveData(data);
             alert('打车费用已录入！');
             document.getElementById('taxi-amount').value = '';
             document.getElementById('taxi-mileage').value = '';
+            document.getElementById('taxi-note').value = '';
             document.getElementById('taxi-suggestion').classList.add('hidden');
         }
 
