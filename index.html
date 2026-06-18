@@ -244,6 +244,33 @@
         </div>
     </div>
 
+    <!-- 编辑支出记录 Modal -->
+    <div id="edit-expense-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 class="text-xl font-bold mb-4">编辑支出记录</h3>
+            <input type="hidden" id="edit-expense-id">
+            <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">日期</label><input type="date" id="edit-expense-date" class="w-full border rounded px-3 py-2 text-sm"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">金额</label><input type="number" id="edit-expense-amount" step="0.01" min="0" class="w-full border rounded px-3 py-2 text-sm"></div>
+                </div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">备注/理由</label><input type="text" id="edit-expense-desc" class="w-full border rounded px-3 py-2 text-sm"></div>
+                <div class="border rounded p-3 space-y-2">
+                    <div class="text-sm font-medium text-gray-700 mb-1">状态勾选</div>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="edit-invoice-received" class="w-4 h-4"><span>已收票</span></label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="edit-paid" class="w-4 h-4"><span>已付款</span></label>
+                    <label class="flex items-center gap-2 text-sm" id="edit-reimbursed-row"><input type="checkbox" id="edit-reimbursed-from-vendor" class="w-4 h-4"><span>已向制作方报销</span></label>
+                    <label class="flex items-center gap-2 text-sm" id="edit-reimbursed-to-me-row"><input type="checkbox" id="edit-reimbursed-to-me" class="w-4 h-4"><span>已报销给我</span></label>
+                    <label class="flex items-center gap-2 text-sm" id="edit-transport-reimbursed-row"><input type="checkbox" id="edit-transport-reimbursed" class="w-4 h-4"><span>打车已报销</span></label>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-6">
+                <button type="button" onclick="closeModal('edit-expense-modal')" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">取消</button>
+                <button type="button" onclick="saveEditExpense()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">保存</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         function generateUUID() {
@@ -368,62 +395,43 @@
         }
 
         async function initializeData() {
-            showLoadingOverlay(true);
-            try {
-                // 检查是否已配置 Token
-                if (!getToken()) {
-                    showLoadingOverlay(false);
-                    await showTokenSetupDialog();
-                    return;
-                }
-                // 从 Gist 读取数据
-                const resp = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-                    headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept': 'application/vnd.github+json' }
-                });
-                if (!resp.ok) {
-                    if (resp.status === 401) {
-                        localStorage.removeItem('gh_token');
-                        _githubToken = null;
-                        showLoadingOverlay(false);
-                        alert('Token 已失效，请重新配置');
-                        await showTokenSetupDialog();
-                        return;
-                    }
-                    throw new Error('Gist 读取失败: ' + resp.status);
-                }
-                const gist = await resp.json();
-                const content = gist.files[GIST_FILE]?.content;
-                _memCache = content && content !== '{}' ? JSON.parse(content) : null;
+            // ① 先从 localStorage 读取（立即可用，不阻塞）
+            const local = localStorage.getItem(STORAGE_KEY);
+            if (local) {
+                try { _memCache = JSON.parse(local); } catch(e) {}
+            }
 
-                if (!_memCache) {
-                    // Gist 无数据，检查 localStorage 是否有旧数据（迁移）
-                    const local = localStorage.getItem(STORAGE_KEY);
-                    if (local) {
-                        _memCache = JSON.parse(local);
-                        await saveData(_memCache);
-                        alert('已将本地数据自动迁移到云端 ✅');
-                    } else {
-                        _memCache = {
-                            projects: INITIAL_PROJECTS.map(p=>({id:generateUUID(),...p,contract_service_fee:null,archived:false,created_at:new Date().toISOString()})),
-                            expenses: [],
-                            taxiRoutes: INITIAL_TAXI_ROUTES.map(r=>({id:generateUUID(),...r}))
-                        };
-                        await saveData(_memCache);
-                    }
+            if (_memCache) {
+                // 本地有数据 → 立即渲染，后台静默同步 Gist
+                showLoadingOverlay(false);
+                updateSyncStatus('local');
+                _syncFromGist(); // 后台异步，不 await
+                return;
+            }
+
+            // 本地无数据 → 必须联网初始化
+            showLoadingOverlay(true);
+            if (!getToken()) {
+                showLoadingOverlay(false);
+                await showTokenSetupDialog();
+                return;
+            }
+            try {
+                const gist = await _fetchGist();
+                if (gist) {
+                    _memCache = gist;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(gist));
+                } else {
+                    // Gist 也无数据，初始化空数据
+                    _memCache = _makeInitialData();
+                    await _pushToGist(_memCache);
                 }
             } catch(e) {
-                console.warn('云端读取失败，降级到localStorage', e);
-                const local = localStorage.getItem(STORAGE_KEY);
-                if (local) _memCache = JSON.parse(local);
-                else {
-                    _memCache = {
-                        projects: INITIAL_PROJECTS.map(p=>({id:generateUUID(),...p,contract_service_fee:null,archived:false,created_at:new Date().toISOString()})),
-                        expenses: [],
-                        taxiRoutes: INITIAL_TAXI_ROUTES.map(r=>({id:generateUUID(),...r}))
-                    };
-                }
+                console.warn('云端读取失败，使用空数据', e);
+                _memCache = _makeInitialData();
             } finally {
                 showLoadingOverlay(false);
+                updateSyncStatus('synced');
             }
         }
 
@@ -431,10 +439,34 @@
 
         async function saveData(d) {
             _memCache = d;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); // 本地备份
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); // 立即写本地（离线也能用）
+            updateSyncStatus('pending');
+            _pushToGist(d); // 后台推送，不 await
+        }
+
+        // 后台从 Gist 拉取最新数据（有网才执行）
+        async function _syncFromGist() {
             if (!getToken()) return;
             try {
-                await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                const gist = await _fetchGist();
+                if (!gist) return;
+                // 简单策略：比较 expenses 数量，Gist 更多则用 Gist（多设备场景）
+                if (!_memCache || (gist.expenses && _memCache.expenses && gist.expenses.length > _memCache.expenses.length)) {
+                    _memCache = gist;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(gist));
+                    renderOverview(); // 静默刷新
+                }
+                updateSyncStatus('synced');
+            } catch(e) {
+                updateSyncStatus('offline'); // 无网，不报错
+            }
+        }
+
+        // 推送数据到 Gist
+        async function _pushToGist(d) {
+            if (!getToken()) return;
+            try {
+                const resp = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
                     method: 'PATCH',
                     headers: {
                         'Authorization': `Bearer ${getToken()}`,
@@ -443,7 +475,64 @@
                     },
                     body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(d) } } })
                 });
-            } catch(e) { console.warn('云端保存失败，数据已保留在本地缓存', e); }
+                if (resp.ok) updateSyncStatus('synced');
+                else updateSyncStatus('error');
+            } catch(e) {
+                updateSyncStatus('offline');
+            }
+        }
+
+        // 从 Gist 读取数据
+        async function _fetchGist() {
+            const resp = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept': 'application/vnd.github+json' }
+            });
+            if (!resp.ok) {
+                if (resp.status === 401) {
+                    localStorage.removeItem('gh_token');
+                    _githubToken = null;
+                    updateSyncStatus('error');
+                }
+                return null;
+            }
+            const gist = await resp.json();
+            const content = gist.files[GIST_FILE]?.content;
+            return content && content !== '{}' ? JSON.parse(content) : null;
+        }
+
+        function _makeInitialData() {
+            return {
+                projects: INITIAL_PROJECTS.map(p=>({id:generateUUID(),...p,contract_service_fee:null,archived:false,created_at:new Date().toISOString()})),
+                expenses: [],
+                taxiRoutes: INITIAL_TAXI_ROUTES.map(r=>({id:generateUUID(),...r}))
+            };
+        }
+
+        // 同步状态指示器
+        function updateSyncStatus(status) {
+            let el = document.getElementById('sync-status-indicator');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'sync-status-indicator';
+                el.style.cssText = 'position:fixed;bottom:72px;right:12px;z-index:999;font-size:11px;padding:3px 8px;border-radius:12px;opacity:0.85;pointer-events:none;transition:opacity 0.5s;';
+                document.body.appendChild(el);
+            }
+            const map = {
+                local:   { text:'📱 本地数据', bg:'#e5e7eb', color:'#374151' },
+                pending: { text:'⏫ 同步中…',  bg:'#fef3c7', color:'#92400e' },
+                synced:  { text:'☁️ 已同步',   bg:'#d1fae5', color:'#065f46' },
+                offline: { text:'📴 离线模式', bg:'#fee2e2', color:'#991b1b' },
+                error:   { text:'⚠️ 同步失败', bg:'#fee2e2', color:'#991b1b' }
+            };
+            const s = map[status] || map.local;
+            el.textContent = s.text;
+            el.style.background = s.bg;
+            el.style.color = s.color;
+            if (status === 'synced') {
+                setTimeout(() => { el.style.opacity = '0'; }, 3000);
+            } else {
+                el.style.opacity = '0.85';
+            }
         }
 
         function showLoadingOverlay(show) {
@@ -752,7 +841,7 @@
                 if(exp.invoice_received) tags.push('<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">已收票</span>');
                 if(exp.paid) tags.push('<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">已付款</span>');
                 if(exp.category==='transport'&&exp.transport_route) tags.push(`<span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">${exp.transport_route}</span>`);
-                expHtml += `<div class="border rounded p-3 flex justify-between items-start"><div class="flex-1"><div class="flex items-center gap-2 mb-1"><span class="text-lg">${getCategoryIcon(exp.category)}</span><span class="font-medium">${exp.date}</span><span class="text-sm text-gray-600">${getCategoryLabel(exp.category)}</span></div><div class="text-sm text-gray-600 mb-1">${exp.description||'无备注'}</div><div class="flex gap-1">${tags.join('')}</div></div><div class="text-right ml-2"><div class="font-bold text-red-600">${formatMoney(exp.amount)}</div><div class="flex gap-1 mt-1"><button onclick="deleteExpense('${exp.id}')" class="text-xs text-red-600 hover:text-red-800">删除</button></div></div></div>`;
+                expHtml += `<div class="border rounded p-3 flex justify-between items-start"><div class="flex-1"><div class="flex items-center gap-2 mb-1"><span class="text-lg">${getCategoryIcon(exp.category)}</span><span class="font-medium">${exp.date}</span><span class="text-sm text-gray-600">${getCategoryLabel(exp.category)}</span></div><div class="text-sm text-gray-600 mb-1">${exp.description||'无备注'}</div><div class="flex gap-1">${tags.join('')}</div></div><div class="text-right ml-2"><div class="font-bold text-red-600">${formatMoney(exp.amount)}</div><div class="flex gap-1 mt-1"><button onclick="showEditExpenseModal('${exp.id}')" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">编辑</button><button onclick="deleteExpense('${exp.id}')" class="text-xs text-red-600 hover:text-red-800">删除</button></div></div></div>`;
             });
             expHtml += `</div></div>`;
             contentEl.innerHTML += expHtml;
@@ -778,6 +867,46 @@
             saveData(data);
             if(currentProjectId) renderProjectDetail(currentProjectId);
             alert('已删除');
+        }
+
+        function showEditExpenseModal(eid) {
+            const data = getData();
+            const e = data.expenses.find(x=>x.id===eid);
+            if(!e) return;
+            document.getElementById('edit-expense-id').value = eid;
+            document.getElementById('edit-expense-date').value = e.date || '';
+            document.getElementById('edit-expense-amount').value = e.amount || '';
+            document.getElementById('edit-expense-desc').value = e.description || '';
+            document.getElementById('edit-invoice-received').checked = !!e.invoice_received;
+            document.getElementById('edit-paid').checked = !!e.paid;
+            document.getElementById('edit-reimbursed-from-vendor').checked = !!e.reimbursed_from_vendor;
+            document.getElementById('edit-reimbursed-to-me').checked = !!e.reimbursed_to_me;
+            document.getElementById('edit-transport-reimbursed').checked = !!e.transport_reimbursed;
+            // 打车类型才显示"打车已报销"
+            document.getElementById('edit-transport-reimbursed-row').style.display = e.category === 'transport' ? '' : 'none';
+            // B类项目才显示"已向制作方报销"
+            const proj = data.projects.find(p=>p.id===e.project_id);
+            document.getElementById('edit-reimbursed-row').style.display = proj && proj.type === 'B' ? '' : 'none';
+            document.getElementById('edit-expense-modal').classList.remove('hidden');
+            document.getElementById('edit-expense-modal').classList.add('flex');
+        }
+
+        function saveEditExpense() {
+            const data = getData();
+            const eid = document.getElementById('edit-expense-id').value;
+            const e = data.expenses.find(x=>x.id===eid);
+            if(!e) return;
+            e.date = document.getElementById('edit-expense-date').value;
+            e.amount = parseFloat(document.getElementById('edit-expense-amount').value) || e.amount;
+            e.description = document.getElementById('edit-expense-desc').value;
+            e.invoice_received = document.getElementById('edit-invoice-received').checked;
+            e.paid = document.getElementById('edit-paid').checked;
+            e.reimbursed_from_vendor = document.getElementById('edit-reimbursed-from-vendor').checked;
+            e.reimbursed_to_me = document.getElementById('edit-reimbursed-to-me').checked;
+            e.transport_reimbursed = document.getElementById('edit-transport-reimbursed').checked;
+            saveData(data);
+            closeModal('edit-expense-modal');
+            if(currentProjectId) renderProjectDetail(currentProjectId);
         }
 
         function initEntryForm() {
@@ -1262,7 +1391,7 @@
             const reason = document.getElementById('taxi-reason-text').textContent;
             const data = getData();
             data.expenses.push({
-                id:generateUUID(), project_id:pid, category:'transport', amount:amt, date:date, description:reason,
+                id:generateUUID(), project_id:pid, category:'transport', amount:amt, date:date, time:time, description:reason,
                 invoice_received:true, paid:true, reimbursed_from_vendor:false, reimbursed_to_me:false,
                 transport_route:route, mileage:mileage, taxi_note:note, created_at:new Date().toISOString()
             });
@@ -1462,20 +1591,22 @@
             if (typeof XLSX === 'undefined') { alert('Excel 库加载中，请稍后再试'); return; }
             const data = getData();
             const wb = XLSX.utils.book_new();
-            const rows = [['日期','项目','路线','里程(km)','金额','备注']];
+            const rows = [['日期','时间','项目','路线','里程(km)','金额','理由','备注']];
             data.expenses.filter(e => e.category === 'transport').sort((a,b)=>a.date.localeCompare(b.date)).forEach(e => {
                 const p = data.projects.find(x=>x.id===e.project_id);
                 rows.push([
                     e.date,
+                    e.time || '',
                     p ? p.name : '未知项目',
                     e.transport_route || '',
                     e.mileage || '',
                     e.amount,
-                    e.description || ''
+                    e.description || '',
+                    e.taxi_note || ''
                 ]);
             });
             const ws = XLSX.utils.aoa_to_sheet(rows);
-            ws['!cols'] = [{wch:12},{wch:22},{wch:35},{wch:10},{wch:10},{wch:20}];
+            ws['!cols'] = [{wch:12},{wch:8},{wch:22},{wch:35},{wch:10},{wch:10},{wch:25},{wch:20}];
             XLSX.utils.book_append_sheet(wb, ws, '打车记录');
             XLSX.writeFile(wb, `打车记录_${getToday()}.xlsx`);
         }
