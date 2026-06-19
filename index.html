@@ -67,11 +67,22 @@
                             <div class="grid grid-cols-2 gap-2">
                                 <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="category" value="production" required class="mr-2"><span class="text-sm">制作费</span></label>
                                 <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="category" value="travel_cctv" class="mr-2"><span class="text-sm">差旅央视网</span></label>
-                                <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="category" value="travel_camera" class="mr-2"><span class="text-sm">差旅摄像团队</span></label>
+                                <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="category" value="travel_camera" class="mr-2"><span class="text-sm">差旅摄像团队<br><span class="text-xs text-gray-400">（制作费范畴）</span></span></label>
                                 <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="category" value="transport" class="mr-2"><span class="text-sm">北京交通费</span></label>
+                                <label id="category-channel-fee-label" class="hidden flex items-center p-3 border rounded-lg cursor-pointer hover:bg-yellow-50 border-yellow-300 col-span-2"><input type="radio" name="category" value="channel_fee" class="mr-2"><span class="text-sm">💰 渠道费用（收入）<br><span class="text-xs text-gray-400">B类专属：记录收到的渠道费用</span></span></label>
                             </div>
                         </div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">金额 *</label><input type="text" id="entry-amount" required placeholder="0.00 或 120+80" onblur="evalAmount(this);updateBudgetHint()" oninput="updateBudgetHint()" inputmode="decimal"><div id="entry-budget-hint" class="text-xs mt-1 hidden"></div></div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="block text-sm font-medium text-gray-700">金额 *</label>
+                                <button type="button" id="voice-btn" onclick="startVoiceInput()" class="flex items-center gap-1 text-xs bg-purple-600 text-white px-3 py-1 rounded-full hover:bg-purple-700 transition">
+                                    🎤 语音录入
+                                </button>
+                            </div>
+                            <input type="text" id="entry-amount" required placeholder="0.00 或 120+80" onblur="evalAmount(this);updateBudgetHint()" oninput="updateBudgetHint()" inputmode="decimal">
+                            <div id="entry-budget-hint" class="text-xs mt-1 hidden"></div>
+                            <div id="voice-status" class="text-xs mt-1 hidden text-purple-600"></div>
+                        </div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">备注</label><textarea id="entry-description" rows="2" placeholder="可选"></textarea></div>
                         <!-- 默认状态字段（非交通费） -->
                         <div id="status-default" class="space-y-2">
@@ -281,8 +292,8 @@
         }
         function formatMoney(amount) { return '¥' + amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
         function getToday() { return new Date().toISOString().split('T')[0]; }
-        function getCategoryLabel(c) { return {'production':'制作费','travel_cctv':'差旅央视网','travel_camera':'差旅摄像团队','transport':'北京交通费'}[c]||c; }
-        function getCategoryIcon(c) { return {'production':'🎬','travel_cctv':'✈️','travel_camera':'📷','transport':'🚗'}[c]||'💰'; }
+        function getCategoryLabel(c) { return {'production':'制作费','travel_cctv':'差旅央视网','travel_camera':'差旅摄像团队','transport':'北京交通费','channel_fee':'渠道费用（收入）'}[c]||c; }
+        function getCategoryIcon(c) { return {'production':'🎬','travel_cctv':'✈️','travel_camera':'📷','transport':'🚗','channel_fee':'💰'}[c]||'💰'; }
         function evalAmount(input) {
             const raw = input.value.trim();
             if (!raw) return;
@@ -796,38 +807,70 @@
             contentEl.innerHTML = '';
 
             const exps = data.expenses.filter(e=>e.project_id===projectId);
-            const prodUsed = exps.filter(e=>e.category==='production'||e.category==='travel_camera').reduce((s,e)=>s+e.amount,0);
+            const prodOnlyUsed = exps.filter(e=>e.category==='production').reduce((s,e)=>s+e.amount,0);
+            const cameraUsed = exps.filter(e=>e.category==='travel_camera').reduce((s,e)=>s+e.amount,0);
+            const prodUsed = prodOnlyUsed + cameraUsed; // 制作费 + 差旅摄像共享制作费预算
             const travelCctvUsed = exps.filter(e=>e.category==='travel_cctv').reduce((s,e)=>s+e.amount,0);
             const transUsed = exps.filter(e=>e.category==='transport').reduce((s,e)=>s+e.amount,0);
-            const cameraUsed = exps.filter(e=>e.category==='travel_camera').reduce((s,e)=>s+e.amount,0);
+            const channelFeeReceived = exps.filter(e=>e.category==='channel_fee').reduce((s,e)=>s+e.amount,0);
             const cameraReimbursed = exps.filter(e=>e.category==='travel_camera'&&e.reimbursed_to_me).reduce((s,e)=>s+e.amount,0);
             const prodReimbursedToMe = exps.filter(e=>e.category==='production'&&e.reimbursed_to_me).reduce((s,e)=>s+e.amount,0);
-            const prodPendingToMe = prodUsed - prodReimbursedToMe;
+            const prodPendingToMe = prodOnlyUsed - prodReimbursedToMe;
 
-            contentEl.innerHTML += `<div class="bg-white border rounded-lg p-4 space-y-3"><h3 class="font-bold text-gray-700 mb-2">预算面板</h3>${renderBudgetItem('制作费',project.budget_production,prodUsed)}<div class="grid grid-cols-3 gap-2 text-xs ml-1 mt-0"><div>已报销给我：<span class="text-green-600">${formatMoney(prodReimbursedToMe)}</span></div><div class="${prodPendingToMe>0?'text-orange-600 font-semibold':'text-gray-500'}">待报销给我：${formatMoney(prodPendingToMe)}</div></div>${project.budget_travel_cctv>0?renderBudgetItem('差旅（央视网）',project.budget_travel_cctv,travelCctvUsed):''}${project.budget_transport>0?renderBudgetItem('北京交通费',project.budget_transport,transUsed):''}<div class="pt-2 border-t"><div class="text-sm"><span class="font-medium">差旅（摄像团队）：</span></div><div class="grid grid-cols-3 gap-2 text-xs mt-1"><div>已垫付：<span class="text-red-600">${formatMoney(cameraUsed)}</span></div><div>已报销给我：<span class="text-green-600">${formatMoney(cameraReimbursed)}</span></div><div>待报销给我：<span class="text-orange-600">${formatMoney(cameraUsed-cameraReimbursed)}</span></div></div></div></div>`;
+            // 预算面板：制作费（含摄像团队）
+            const prodBudgetNote = `<div class="text-xs text-gray-400 mt-0.5">↳ 制作费 ${formatMoney(prodOnlyUsed)} + 差旅摄像 ${formatMoney(cameraUsed)}（共享制作费预算）</div>`;
+            contentEl.innerHTML += `<div class="bg-white border rounded-lg p-4 space-y-3"><h3 class="font-bold text-gray-700 mb-2">预算面板</h3>${renderBudgetItem('制作费（含差旅摄像）',project.budget_production,prodUsed)}${prodBudgetNote}<div class="grid grid-cols-2 gap-2 text-xs ml-1 mt-1"><div>制作费已报销给我：<span class="text-green-600">${formatMoney(prodReimbursedToMe)}</span></div><div class="${prodPendingToMe>0?'text-orange-600 font-semibold':'text-gray-500'}">制作费待报销给我：${formatMoney(prodPendingToMe)}</div><div>差旅摄像已报销：<span class="text-green-600">${formatMoney(cameraReimbursed)}</span></div><div class="${(cameraUsed-cameraReimbursed)>0?'text-orange-600':'text-gray-500'}">差旅摄像待报销：${formatMoney(cameraUsed-cameraReimbursed)}</div></div>${project.budget_travel_cctv>0?renderBudgetItem('差旅（央视网）',project.budget_travel_cctv,travelCctvUsed):''}${project.budget_transport>0?renderBudgetItem('北京交通费',project.budget_transport,transUsed):''}</div>`;
 
             if(project.type==='A') {
-                const totalExp = prodUsed+travelCctvUsed+transUsed;
+                // A类：应取现 = 制作费预算 - 签约服务费 - 制作费支出（含差旅摄像）
+                // 差旅央视网和北京交通费是单独报销的，不影响取现
                 const sf = project.contract_service_fee||0;
-                const profit = (project.budget_production+project.budget_travel_cctv+project.budget_transport)-sf-totalExp;
-                const rate = (project.budget_production+project.budget_travel_cctv+project.budget_transport)>0?((profit/(project.budget_production+project.budget_travel_cctv+project.budget_transport))*100).toFixed(2):0;
-                contentEl.innerHTML += `<div class="bg-white border rounded-lg p-4 space-y-3"><h3 class="font-bold text-gray-700 mb-2">利润面板（A类）</h3><div class="space-y-2 text-sm"><div class="flex justify-between"><span>制作费合同额：</span><span class="font-semibold">${formatMoney(project.budget_production)}</span></div><div class="flex justify-between items-center"><span>签约服务费：</span><span class="cursor-pointer text-blue-600 hover:underline" onclick="editServiceFee('${project.id}')">${project.contract_service_fee!==null?formatMoney(project.contract_service_fee):'点击填写'}</span></div><div class="flex justify-between"><span>实际总支出：</span><span class="font-semibold text-red-600">${formatMoney(totalExp)}</span></div><div class="pt-2 border-t flex justify-between text-base"><span class="font-bold">预计利润：</span><span class="font-bold ${profit>=0?'text-green-600':'text-red-600'}">${project.contract_service_fee!==null?formatMoney(profit):'待填写签约服务费'}</span></div>${project.contract_service_fee!==null?`<div class="flex justify-between text-sm"><span>利润率：</span><span class="${profit>=0?'text-green-600':'text-red-600'}">${rate}%</span></div>`:''}</div></div>`;
+                const cashOut = project.budget_production - sf - prodUsed;
+                const rate = project.budget_production>0?((cashOut/project.budget_production)*100).toFixed(1):0;
+                contentEl.innerHTML += `<div class="bg-white border rounded-lg p-4 space-y-3"><h3 class="font-bold text-gray-700 mb-2">取现面板（A类）</h3><div class="space-y-2 text-sm"><div class="flex justify-between"><span>制作费合同额：</span><span class="font-semibold">${formatMoney(project.budget_production)}</span></div><div class="flex justify-between items-center"><span>签约服务费：</span><span class="cursor-pointer text-blue-600 hover:underline" onclick="editServiceFee('${project.id}')">${project.contract_service_fee!==null?formatMoney(project.contract_service_fee):'点击填写'}</span></div><div class="flex justify-between"><span>制作费支出（含差旅摄像）：</span><span class="font-semibold text-red-600">${formatMoney(prodUsed)}</span></div><div class="text-xs text-gray-400 ml-2">↳ 制作费 ${formatMoney(prodOnlyUsed)} + 差旅摄像 ${formatMoney(cameraUsed)}</div><div class="pt-2 border-t flex justify-between text-base"><span class="font-bold">应取现金额：</span><span class="font-bold ${cashOut>=0?'text-green-600':'text-red-600'}">${project.contract_service_fee!==null?formatMoney(cashOut):'待填写签约服务费'}</span></div>${project.contract_service_fee!==null?`<div class="flex justify-between text-sm text-gray-500"><span>差旅（央视网）、北京交通费单独报销，不计入取现</span></div>`:''}</div></div>`;
             }
 
             if(project.type==='B') {
-                const pending = exps.filter(e=>e.invoice_received&&e.paid&&!e.reimbursed_from_vendor);
-                const completed = exps.filter(e=>e.invoice_received&&e.paid&&e.reimbursed_from_vendor);
-                const totalPending = pending.reduce((s,e)=>s+e.amount,0);
-                let html = `<div class="bg-white border rounded-lg p-4"><h3 class="font-bold text-gray-700 mb-2">报销追踪（B类）</h3><div class="mb-3 p-3 bg-orange-50 rounded-lg"><div class="text-sm"><span class="font-medium">总待报销金额：</span><span class="text-orange-600 font-bold text-lg">${formatMoney(totalPending)}</span></div></div>`;
-                if(pending.length>0) {
-                    html += `<div class="space-y-2 mb-3"><h4 class="text-sm font-semibold">待报销列表</h4>`;
-                    pending.forEach(e => {
-                        html += `<div class="border rounded p-2 text-sm flex justify-between items-center"><div><div class="font-medium">${e.date} ${getCategoryIcon(e.category)} ${getCategoryLabel(e.category)}</div><div class="text-gray-600">${e.description||'无备注'}</div></div><div class="text-right"><div class="font-bold text-red-600">${formatMoney(e.amount)}</div><button onclick="markReimbursed('${e.id}')" class="text-xs bg-blue-600 text-white px-2 py-1 rounded mt-1 hover:bg-blue-700">标记已报销</button></div></div>`;
+                // B类：渠道费用（收入）+ 差旅摄像（支出）均从制作费里出
+                const channelFeeExps = exps.filter(e=>e.category==='channel_fee');
+                const pendingExps = exps.filter(e=>e.category!=='channel_fee'&&e.invoice_received&&e.paid&&!e.reimbursed_from_vendor);
+                const completedExps = exps.filter(e=>e.category!=='channel_fee'&&e.invoice_received&&e.paid&&e.reimbursed_from_vendor);
+                const totalPending = pendingExps.reduce((s,e)=>s+e.amount,0);
+
+                // 制作费使用情况（不含渠道费用）
+                const prodNetUsed = prodUsed; // 差旅摄像已包含在内
+                const netIncome = channelFeeReceived - cameraUsed; // 净收益 = 渠道费用 - 差旅摄像
+
+                let html = `<div class="bg-white border rounded-lg p-4"><h3 class="font-bold text-gray-700 mb-2">制作费分配（B类）</h3>`;
+                html += `<div class="p-3 bg-blue-50 rounded-lg mb-3 text-sm space-y-1">`;
+                html += `<div class="flex justify-between"><span>制作费预算：</span><span class="font-semibold">${formatMoney(project.budget_production)}</span></div>`;
+                html += `<div class="flex justify-between"><span>💰 渠道费用（已收）：</span><span class="text-green-600 font-bold">+${formatMoney(channelFeeReceived)}</span></div>`;
+                html += `<div class="flex justify-between"><span>📷 差旅摄像（已垫付）：</span><span class="text-red-600">-${formatMoney(cameraUsed)}</span></div>`;
+                html += `<div class="flex justify-between border-t pt-1 mt-1"><span class="font-medium">渠道净收益：</span><span class="font-bold ${netIncome>=0?'text-green-600':'text-red-600'}">${formatMoney(netIncome)}</span></div>`;
+                html += `</div>`;
+
+                // 渠道费用收入记录
+                if(channelFeeExps.length>0) {
+                    html += `<h4 class="text-sm font-semibold mb-2">渠道费用收入记录</h4><div class="space-y-1 mb-3">`;
+                    channelFeeExps.forEach(e=>{
+                        html += `<div class="border rounded p-2 text-sm flex justify-between"><div>${e.date} 💰 ${e.description||'无备注'}</div><div class="font-bold text-green-600">+${formatMoney(e.amount)}</div></div>`;
                     });
                     html += `</div>`;
                 }
-                if(completed.length>0) {
-                    html += `<details class="mt-2"><summary class="cursor-pointer text-sm text-gray-600 hover:text-gray-800">已完成报销历史 (${completed.length}笔)</summary><div class="mt-2 space-y-2">${completed.map(e=>`<div class="border rounded p-2 text-sm flex justify-between"><div>${e.date} ${getCategoryIcon(e.category)} ${getCategoryLabel(e.category)}</div><div class="font-semibold">${formatMoney(e.amount)}</div></div>`).join('')}</div></details>`;
+
+                html += `<h4 class="text-sm font-semibold mb-2">待向制作方报销（${pendingExps.length}笔）</h4>`;
+                if(pendingExps.length>0) {
+                    html += `<div class="mb-2 p-2 bg-orange-50 rounded text-sm"><span class="font-medium">总待报销：</span><span class="text-orange-600 font-bold">${formatMoney(totalPending)}</span></div>`;
+                    html += `<div class="space-y-2 mb-3">`;
+                    pendingExps.forEach(e => {
+                        html += `<div class="border rounded p-2 text-sm flex justify-between items-center"><div><div class="font-medium">${e.date} ${getCategoryIcon(e.category)} ${getCategoryLabel(e.category)}</div><div class="text-gray-600">${e.description||'无备注'}</div></div><div class="text-right"><div class="font-bold text-red-600">${formatMoney(e.amount)}</div><button onclick="markReimbursed('${e.id}')" class="text-xs bg-blue-600 text-white px-2 py-1 rounded mt-1 hover:bg-blue-700">标记已报销</button></div></div>`;
+                    });
+                    html += `</div>`;
+                } else {
+                    html += `<div class="text-sm text-gray-400 mb-3">暂无待报销记录</div>`;
+                }
+                if(completedExps.length>0) {
+                    html += `<details class="mt-2"><summary class="cursor-pointer text-sm text-gray-600 hover:text-gray-800">已完成报销历史 (${completedExps.length}笔)</summary><div class="mt-2 space-y-2">${completedExps.map(e=>`<div class="border rounded p-2 text-sm flex justify-between"><div>${e.date} ${getCategoryIcon(e.category)} ${getCategoryLabel(e.category)}</div><div class="font-semibold">${formatMoney(e.amount)}</div></div>`).join('')}</div></details>`;
                 }
                 html += `</div>`;
                 contentEl.innerHTML += html;
@@ -940,14 +983,26 @@
             const data = getData();
             const p = data.projects.find(x=>x.id===pid);
 
+            // B类项目才显示渠道费用选项
+            const channelFeeLabel = document.getElementById('category-channel-fee-label');
+            if (channelFeeLabel) {
+                const isBProject = p && p.type === 'B';
+                channelFeeLabel.classList.toggle('hidden', !isBProject);
+                // 如果切换到非B类项目，且当前选中了channel_fee，清除选择
+                if (!isBProject && catVal === 'channel_fee') {
+                    document.querySelector('input[name="category"][value="production"]').checked = true;
+                }
+            }
+
             // 切换状态勾选区域
             const isTransport = catVal === 'transport';
             const isTravelCctv = catVal === 'travel_cctv';
-            document.getElementById('status-default').classList.toggle('hidden', isTransport || isTravelCctv);
+            const isChannelFee = catVal === 'channel_fee';
+            document.getElementById('status-default').classList.toggle('hidden', isTransport || isTravelCctv || isChannelFee);
             document.getElementById('status-travel-cctv').classList.toggle('hidden', !isTravelCctv);
             document.getElementById('status-transport').classList.toggle('hidden', !isTransport);
 
-            if (!isTransport && !isTravelCctv) {
+            if (!isTransport && !isTravelCctv && !isChannelFee) {
                 document.getElementById('entry-reimbursed-vendor-label').classList.toggle('hidden', !p||p.type!=='B');
                 const showReimbMe = (catVal==='travel_camera' || catVal==='production');
                 document.getElementById('entry-reimbursed-me-label').classList.toggle('hidden', !showReimbMe);
@@ -970,6 +1025,75 @@
             updateBudgetHint();
         }
         document.querySelectorAll('input[name="category"]').forEach(r=>r.addEventListener('change',updateEntryFormFields));
+
+        // ==================== 语音记账 ====================
+        function startVoiceInput() {
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) {
+                alert('你的浏览器不支持语音识别，请使用 Chrome');
+                return;
+            }
+            const btn = document.getElementById('voice-btn');
+            const statusEl = document.getElementById('voice-status');
+            const recognition = new SR();
+            recognition.lang = 'zh-CN';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            btn.textContent = '🔴 识别中...';
+            btn.disabled = true;
+            statusEl.classList.remove('hidden');
+            statusEl.textContent = '正在监听，请说出金额和类型...';
+            recognition.onresult = function(event) {
+                const text = event.results[0][0].transcript;
+                statusEl.textContent = `识别结果：「${text}」`;
+                parseVoiceInput(text);
+                btn.textContent = '🎤 语音录入';
+                btn.disabled = false;
+                setTimeout(() => statusEl.classList.add('hidden'), 3000);
+            };
+            recognition.onerror = function(event) {
+                statusEl.textContent = `识别失败：${event.error}`;
+                btn.textContent = '🎤 语音录入';
+                btn.disabled = false;
+                setTimeout(() => statusEl.classList.add('hidden'), 3000);
+            };
+            recognition.onend = function() {
+                btn.textContent = '🎤 语音录入';
+                btn.disabled = false;
+            };
+            recognition.start();
+        }
+
+        function parseVoiceInput(text) {
+            // 解析金额（支持"X元"格式）
+            const amtMatch = text.match(/(\d+\.?\d*)\s*元/);
+            if (amtMatch) {
+                document.getElementById('entry-amount').value = amtMatch[1];
+                updateBudgetHint();
+            }
+            // 解析备注（去掉金额部分）
+            const descText = text.replace(/\d+\.?\d*\s*元/, '').trim();
+            if (descText) {
+                document.getElementById('entry-description').value = descText;
+            }
+            // 解析类型关键词
+            let targetCat = null;
+            if (text.includes('打车') || text.includes('滴滴') || text.includes('交通')) {
+                targetCat = 'transport';
+            } else if (text.includes('摄像') || text.includes('摄影') || text.includes('摄像团队')) {
+                targetCat = 'travel_camera';
+            } else if (text.includes('差旅') || text.includes('出差') || text.includes('央视')) {
+                targetCat = 'travel_cctv';
+            } else if (text.includes('制作') || text.includes('拍摄') || text.includes('剪辑') || text.includes('后期')) {
+                targetCat = 'production';
+            } else if (text.includes('渠道')) {
+                targetCat = 'channel_fee';
+            }
+            if (targetCat) {
+                const radio = document.querySelector(`input[name="category"][value="${targetCat}"]`);
+                if (radio) { radio.checked = true; updateEntryFormFields(); }
+            }
+        }
 
         function handleExpenseSubmit(event) {
             event.preventDefault();
