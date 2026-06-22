@@ -1254,6 +1254,149 @@
             soe: ['中石油大厦', '中石化大厦', '国家电网总部', '中国移动大厦', '中国电信大厦']
         };
 
+        // 基于历史报销数据学习的个人常用路线库（岳汀）
+        // 数据来源：6份日常交通报销单（2025-10 ~ 2026-06），共 70+ 条打车记录
+        const PERSONAL_ROUTE_HISTORY = [
+            // === 高频路线：望海楼 ↔ 融创亦庄壹号（加班回家，约110-130元，20:30后） ===
+            { from: '望海楼', to: '融创亦庄壹号', amount: 115, type: 'home', reason: '加班后回家', timeRule: 'weekday_after_2030', frequency: 12 },
+            { from: '融创亦庄壹号', to: '望海楼', amount: 118, type: 'work', reason: '周末/节假日到公司加班', timeRule: 'weekend', frequency: 3 },
+
+            // === 高频路线：望海楼 ↔ 景阳商务大厦（剪辑/后期，约35元） ===
+            { from: '望海楼', to: '景阳商务大厦', amount: 35, type: 'work', reason: '外出机房剪辑/后期制作', timeRule: 'workday_daytime', frequency: 5 },
+            { from: '景阳商务大厦', to: '望海楼', amount: 36, type: 'work', reason: '剪辑后回公司', timeRule: 'workday_daytime', frequency: 3 },
+
+            // === 高频路线：望海楼 ↔ 北京大学/清华大学（拜访专家，约30-56元） ===
+            { from: '望海楼', to: '北京大学西南门', amount: 28, type: 'work', reason: '拜访北大教授/专家', timeRule: 'workday_daytime', frequency: 3 },
+            { from: '北京大学西南门', to: '望海楼', amount: 30, type: 'work', reason: '拜访后返回公司', timeRule: 'workday_daytime', frequency: 2 },
+            { from: '望海楼', to: '清华大学东门', amount: 36, type: 'work', reason: '邀约清华专家参与节目', timeRule: 'workday_daytime', frequency: 2 },
+
+            // === 高频路线：望海楼 ↔ 华夏基金（约50元） ===
+            { from: '望海楼', to: '华夏基金管理有限公司', amount: 52, type: 'work', reason: '前往华夏基金沟通项目', timeRule: 'workday_daytime', frequency: 2 },
+            { from: '华夏基金公司', to: '望海楼', amount: 49, type: 'work', reason: '沟通后返回公司', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 高频路线：望海楼 ↔ 中储粮集团大厦（约19元） ===
+            { from: '望海楼', to: '中储粮集团大厦', amount: 19, type: 'work', reason: '洽谈中储粮联动项目', timeRule: 'workday_daytime', frequency: 2 },
+            { from: '中储粮集团大厦', to: '望海楼', amount: 17, type: 'work', reason: '洽谈后返回公司', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 望海楼 ↔ 快手元中心（约56元） ===
+            { from: '望海楼', to: '快手元中心', amount: 56, type: 'work', reason: '前往快手开会沟通合作', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 望海楼 ↔ 中国传媒大学（约77元） ===
+            { from: '望海楼', to: '中国传媒大学', amount: 77, type: 'work', reason: '拜访传媒大学专家', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 望海楼 ↔ 首都机场（约126元） ===
+            { from: '望海楼', to: '首都机场', amount: 126, type: 'work', reason: '到机场接活动嘉宾', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 望海楼 ↔ 北辰荟（约45-157元，腾讯活动） ===
+            { from: '望海楼', to: '北辰荟', amount: 50, type: 'work', reason: '外出活动场地踩点/彩排', timeRule: 'workday_daytime', frequency: 3 },
+            { from: '北辰荟', to: '望海楼', amount: 50, type: 'work', reason: '活动后返回公司', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '北辰荟', to: '融创亦庄壹号', amount: 132, type: 'home', reason: '活动彩排后回家（晚归）', timeRule: 'any_after_2000', frequency: 1 },
+
+            // === 望海楼 ↔ 数字北京大厦（约43元） ===
+            { from: '望海楼', to: '数字北京大厦', amount: 43, type: 'work', reason: '外出邀约合作企业', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 望海楼 ↔ 东方金叶文创园（约69元） ===
+            { from: '望海楼', to: '东方金叶文创园', amount: 69, type: 'work', reason: '与供应商洽谈合作', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 望海楼 ↔ 机器人产业园（约119元） ===
+            { from: '望海楼', to: '北京市机器人产业园', amount: 119, type: 'work', reason: '拜访机器人行业客户', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '北京市机器人产业园', to: '望海楼', amount: 111, type: 'work', reason: '拜访后返回公司', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 望海楼 ↔ 未来科学城（约130元） ===
+            { from: '望海楼', to: '未来科学城一期', amount: 130, type: 'work', reason: '外出拜访粮食行业客户', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 望海楼 ↔ 望京SOHO（约112元） ===
+            { from: '融创亦庄壹号', to: '望京SOHO', amount: 112, type: 'work', reason: '周末取设备+拜访合作方', timeRule: 'weekend', frequency: 1 },
+
+            // === 望海楼 ↔ 中粮营养健康研究院（约151元） ===
+            { from: '望海楼', to: '中粮营养健康研究院', amount: 151, type: 'work', reason: '拜访科技养老项目合作方', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 望海楼 ↔ 国家图书馆（约19元） ===
+            { from: '望海楼', to: '中国国家图书馆', amount: 19, type: 'work', reason: '沟通线下沙龙活动', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 望海楼 ↔ 传导空间（约60元） ===
+            { from: '望海楼', to: '传导空间', amount: 60, type: 'work', reason: '参与拍摄对象发布会', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 外出后回公司（高频模式） ===
+            { from: '太阳名车', to: '望海楼', amount: 76, type: 'work', reason: '外出拍摄后回公司', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '中国人民大学', to: '望海楼', amount: 20, type: 'work', reason: '拍摄后回公司', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '自空间', to: '望海楼', amount: 57, type: 'work', reason: '参加发布会后回公司', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '北京安贞环宇荟', to: '望海楼', amount: 51, type: 'work', reason: '洽谈合作后回公司', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '芳园里', to: '望海楼', amount: 63, type: 'work', reason: '活动踩点后回公司', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '城市会客厅大厦', to: '望海楼', amount: 104, type: 'work', reason: '拜访专家后回公司', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '天和景园', to: '望海楼', amount: 35, type: 'work', reason: '补拍素材后回公司', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '中经云数据存储', to: '望海楼', amount: 88, type: 'work', reason: '拜访客户后回公司', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 加班回家（非融创亦庄壹号目的地） ===
+            { from: '望海楼', to: '蒲黄榆', amount: 50, type: 'home', reason: '加班后回家', timeRule: 'weekday_after_2030', frequency: 3 },
+            { from: '望海楼', to: '光辉南里小区', amount: 49, type: 'home', reason: '加班后回家', timeRule: 'weekday_after_2030', frequency: 2 },
+            { from: '望海楼', to: '三丰里社区', amount: 47, type: 'home', reason: '加班后回家', timeRule: 'weekday_after_2030', frequency: 1 },
+            { from: '望海楼', to: '铭科苑', amount: 58, type: 'home', reason: '加班后回家', timeRule: 'weekday_after_2030', frequency: 1 },
+            { from: '望海楼', to: '万方家园', amount: 102, type: 'home', reason: '加班后回家', timeRule: 'weekday_after_2030', frequency: 1 },
+
+            // === 晚间外出后直接回家（非望海楼出发） ===
+            { from: '畅春园', to: '融创亦庄壹号', amount: 141, type: 'home', reason: '外出拍摄后直接回家（晚归）', timeRule: 'any_after_2000', frequency: 1 },
+            { from: '快手元中心', to: '融创亦庄壹号', amount: 154, type: 'home', reason: '外出开会后直接回家（晚归）', timeRule: 'any_after_2000', frequency: 1 },
+            { from: '清华大学东门', to: '融创亦庄壹号', amount: 138, type: 'home', reason: '拜访嘉宾后直接回家（晚归）', timeRule: 'any_after_2000', frequency: 1 },
+
+            // === 周末加班往返 ===
+            { from: '紫耀大厦', to: '望海楼', amount: 71, type: 'work', reason: '周末前往公司加班', timeRule: 'weekend', frequency: 1 },
+            { from: '望海楼', to: '蒲黄榆地铁站', amount: 49, type: 'home', reason: '周末加班后回家', timeRule: 'weekend', frequency: 1 },
+            { from: '望海楼', to: '阜成门地铁站', amount: 210, type: 'home', reason: '周末加班后回家', timeRule: 'weekend', frequency: 1 },
+
+            // === 工作日外出办公（起点非望海楼） ===
+            { from: '西直门凯德MALL', to: '望海楼', amount: 36, type: 'work', reason: '与供应商沟通后回公司', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '京臻咖啡', to: '望海楼', amount: 43, type: 'work', reason: '拍摄后回公司', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '公主坟', to: '景阳商务大厦', amount: 35, type: 'work', reason: '外出邀约节目嘉宾', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '北京理工大学', to: '北京市机器人产业园', amount: 119, type: 'work', reason: '拜访专家及客户', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '东方金针文创园', to: 'SOHO嘉盛中心', amount: 29, type: 'work', reason: '拜访智慧养老专家', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '太古里北区', to: '望海楼', amount: 63, type: 'work', reason: '邀约专家后回公司', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '物华大厦', to: '望海楼', amount: 20, type: 'work', reason: '拜访嘉宾后回公司', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 连续踩点/转场（非望海楼出发） ===
+            { from: '北辰荟', to: '朝阳合生汇', amount: 65, type: 'work', reason: '年度活动场地踩点转场', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '景阳商务大厦', to: '天和景园', amount: 13, type: 'work', reason: '补拍外景转场', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '北京大学西南门', to: '清华大学东门', amount: 26, type: 'work', reason: '连续拜访专家转场', timeRule: 'workday_daytime', frequency: 1 },
+
+            // === 特殊路线 ===
+            { from: '望海楼', to: '朗丽兹太和府酒店', amount: 157, type: 'work', reason: '途经酒店接嘉宾参加活动', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '武影器材租赁', to: '朝阳园', amount: 19, type: 'home', reason: '拍摄结束后回家（深夜）', timeRule: 'any_after_2200', frequency: 1 },
+            { from: '京市口袋站', to: '望海楼', amount: 29, type: 'work', reason: '拍摄后回公司整理素材', timeRule: 'workday_daytime', frequency: 1 },
+            { from: '中国航天博物馆', to: '富凯大厦', amount: 71, type: 'work', reason: '周末邀约节目嘉宾转场', timeRule: 'weekend', frequency: 1 },
+            { from: '机器人产业园', to: '中国航天博物馆', amount: 42, type: 'work', reason: '周末沟通企业转场', timeRule: 'weekend', frequency: 1 }
+        ];
+
+        // 根据当前输入匹配历史路线（返回匹配列表，按 frequency 降序）
+        function matchPersonalRoutes(fromInput, toInput, isWeekend, isAfter2030) {
+            const results = [];
+            const fromLower = (fromInput || '').toLowerCase();
+            const toLower = (toInput || '').toLowerCase();
+
+            for (const route of PERSONAL_ROUTE_HISTORY) {
+                let score = 0;
+                const rf = route.from.toLowerCase();
+                const rt = route.to.toLowerCase();
+
+                // 起点匹配
+                if (fromLower && rf.includes(fromLower)) score += 30;
+                else if (fromLower && fromLower.includes(rf)) score += 25;
+                // 终点匹配
+                if (toLower && rt.includes(toLower)) score += 30;
+                else if (toLower && toLower.includes(rt)) score += 25;
+                // 时间规则加分
+                if (isWeekend && route.timeRule === 'weekend') score += 15;
+                if (isAfter2030 && (route.timeRule === 'weekday_after_2030' || route.timeRule === 'any_after_2000' || route.timeRule === 'any_after_2200')) score += 15;
+                if (!isWeekend && !isAfter2030 && route.timeRule === 'workday_daytime') score += 10;
+                // 频率加分
+                score += Math.min(route.frequency, 10);
+
+                if (score > 0) results.push({ ...route, score });
+            }
+
+            results.sort((a, b) => b.score - a.score);
+            return results.slice(0, 5); // 最多返回5条
+        }
+
         function initTaxiPage() {
             document.getElementById('taxi-date').value = getToday();
             renderTaxiRoutes();
@@ -1500,6 +1643,25 @@
             document.getElementById('taxi-rule-text').textContent = rule;
             document.getElementById('taxi-route-text').textContent = route;
             document.getElementById('taxi-reason-text').textContent = reason;
+
+            // 历史路线匹配：根据起终点+时间规则匹配个人历史路线
+            const isWeekend = !wd;
+            const isAfter2030 = wd && tv >= 20*60+30;
+            const matchedRoutes = matchPersonalRoutes(fromInput, toInput, isWeekend, isAfter2030);
+            if (matchedRoutes.length > 0) {
+                const best = matchedRoutes[0];
+                document.getElementById('taxi-amount').value = best.amount;
+                document.getElementById('taxi-reason-text').textContent = best.reason;
+                document.getElementById('taxi-from').value = best.from;
+                document.getElementById('taxi-to').value = best.to;
+                document.getElementById('taxi-route-text').textContent = `${best.from} → ${best.to}`;
+                // 显示匹配提示
+                const matchInfo = matchedRoutes.length > 1
+                    ? `已匹配 ${matchedRoutes.length} 条历史路线，已填入最佳匹配`
+                    : '已匹配历史路线';
+                document.getElementById('taxi-rule-text').textContent = rule + ' · ' + matchInfo;
+            }
+
             updateTaxiProjectSelect();
         }
 
