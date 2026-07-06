@@ -67,7 +67,7 @@
                             <div class="grid grid-cols-2 gap-2">
                                 <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="category" value="production" required class="mr-2"><span class="text-sm">制作费</span></label>
                                 <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="category" value="travel_cctv" class="mr-2"><span class="text-sm">差旅央视网</span></label>
-                                <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="category" value="travel_camera" class="mr-2"><span class="text-sm">差旅摄像团队<br><span class="text-xs text-gray-400">（制作费范畴）</span></span></label>
+                                <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="category" value="travel_camera" class="mr-2"><span class="text-sm">运营费用<br><span class="text-xs text-gray-400">（制作费范畴，垫付后待报销）</span></span></label>
                                 <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"><input type="radio" name="category" value="transport" class="mr-2"><span class="text-sm">北京交通费</span></label>
                                 <label id="category-channel-fee-label" class="hidden flex items-center p-3 border rounded-lg cursor-pointer hover:bg-yellow-50 border-yellow-300 col-span-2"><input type="radio" name="category" value="channel_fee" class="mr-2"><span class="text-sm">💰 渠道费用（收入）<br><span class="text-xs text-gray-400">B类专属：记录收到的渠道费用</span></span></label>
                             </div>
@@ -292,7 +292,7 @@
         }
         function formatMoney(amount) { return '¥' + amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
         function getToday() { return new Date().toISOString().split('T')[0]; }
-        function getCategoryLabel(c) { return {'production':'制作费','travel_cctv':'差旅央视网','travel_camera':'差旅摄像团队','transport':'北京交通费','channel_fee':'渠道费用（收入）'}[c]||c; }
+        function getCategoryLabel(c) { return {'production':'制作费','travel_cctv':'差旅央视网','travel_camera':'运营费用','transport':'北京交通费','channel_fee':'渠道费用（收入）'}[c]||c; }
         function getCategoryIcon(c) { return {'production':'🎬','travel_cctv':'✈️','travel_camera':'📷','transport':'🚗','channel_fee':'💰'}[c]||'💰'; }
         function evalAmount(input) {
             const raw = input.value.trim();
@@ -776,7 +776,7 @@
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-2">
                         <h3 class="font-bold text-lg">${project.name}</h3>
-                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${project.type==='A'?'bg-blue-100 text-blue-700':'bg-purple-100 text-purple-700'}">${project.type}类</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${project.type==='A'?'bg-blue-100 text-blue-700':'bg-purple-100 text-purple-700'}">${project.type==='A'?'自营':'共建'}</span>
                     </div>
                     <div class="grid grid-cols-3 gap-2 text-sm mb-2">
                         <div><span class="text-gray-500">预算</span><div class="font-semibold">${formatMoney(budget)}</div></div>
@@ -817,60 +817,63 @@
             const prodReimbursedToMe = exps.filter(e=>e.category==='production'&&e.reimbursed_to_me).reduce((s,e)=>s+e.amount,0);
             const prodPendingToMe = prodOnlyUsed - prodReimbursedToMe;
 
-            // 预算面板：制作费（含摄像团队）
-            const prodBudgetNote = `<div class="text-xs text-gray-400 mt-0.5">↳ 制作费 ${formatMoney(prodOnlyUsed)} + 差旅摄像 ${formatMoney(cameraUsed)}（共享制作费预算）</div>`;
-            contentEl.innerHTML += `<div class="bg-white border rounded-lg p-4 space-y-3"><h3 class="font-bold text-gray-700 mb-2">预算面板</h3>${renderBudgetItem('制作费（含差旅摄像）',project.budget_production,prodUsed)}${prodBudgetNote}<div class="grid grid-cols-2 gap-2 text-xs ml-1 mt-1"><div>制作费已报销给我：<span class="text-green-600">${formatMoney(prodReimbursedToMe)}</span></div><div class="${prodPendingToMe>0?'text-orange-600 font-semibold':'text-gray-500'}">制作费待报销给我：${formatMoney(prodPendingToMe)}</div><div>差旅摄像已报销：<span class="text-green-600">${formatMoney(cameraReimbursed)}</span></div><div class="${(cameraUsed-cameraReimbursed)>0?'text-orange-600':'text-gray-500'}">差旅摄像待报销：${formatMoney(cameraUsed-cameraReimbursed)}</div></div>${project.budget_travel_cctv>0?renderBudgetItem('差旅（央视网）',project.budget_travel_cctv,travelCctvUsed):''}${project.budget_transport>0?renderBudgetItem('北京交通费',project.budget_transport,transUsed):''}</div>`;
+            // 预算面板：制作费（含运营费用）
+            const prodBudgetNote = `<div class="text-xs text-gray-400 mt-0.5">↳ 制作费 ${formatMoney(prodOnlyUsed)} + 运营费用 ${formatMoney(cameraUsed)}（共享制作费预算）</div>`;
+            contentEl.innerHTML += `<div class="bg-white border rounded-lg p-4 space-y-3"><h3 class="font-bold text-gray-700 mb-2">预算面板</h3>${renderBudgetItem('制作费（含运营费用）',project.budget_production,prodUsed)}${prodBudgetNote}${project.budget_travel_cctv>0?renderBudgetItem('差旅（央视网）',project.budget_travel_cctv,travelCctvUsed):''}${project.budget_transport>0?renderBudgetItem('北京交通费',project.budget_transport,transUsed):''}</div>`;
 
             if(project.type==='A') {
-                // A类：应取现 = 制作费预算 - 签约服务费 - 制作费支出（含差旅摄像）
+                // A类（自营）：应取现 = 制作费预算 - 签约服务费 - 制作费支出（含运营费用）
                 // 差旅央视网和北京交通费是单独报销的，不影响取现
                 const sf = project.contract_service_fee||0;
                 const cashOut = project.budget_production - sf - prodUsed;
                 const rate = project.budget_production>0?((cashOut/project.budget_production)*100).toFixed(1):0;
-                contentEl.innerHTML += `<div class="bg-white border rounded-lg p-4 space-y-3"><h3 class="font-bold text-gray-700 mb-2">取现面板（A类）</h3><div class="space-y-2 text-sm"><div class="flex justify-between"><span>制作费合同额：</span><span class="font-semibold">${formatMoney(project.budget_production)}</span></div><div class="flex justify-between items-center"><span>签约服务费：</span><span class="cursor-pointer text-blue-600 hover:underline" onclick="editServiceFee('${project.id}')">${project.contract_service_fee!==null?formatMoney(project.contract_service_fee):'点击填写'}</span></div><div class="flex justify-between"><span>制作费支出（含差旅摄像）：</span><span class="font-semibold text-red-600">${formatMoney(prodUsed)}</span></div><div class="text-xs text-gray-400 ml-2">↳ 制作费 ${formatMoney(prodOnlyUsed)} + 差旅摄像 ${formatMoney(cameraUsed)}</div><div class="pt-2 border-t flex justify-between text-base"><span class="font-bold">应取现金额：</span><span class="font-bold ${cashOut>=0?'text-green-600':'text-red-600'}">${project.contract_service_fee!==null?formatMoney(cashOut):'待填写签约服务费'}</span></div>${project.contract_service_fee!==null?`<div class="flex justify-between text-sm text-gray-500"><span>差旅（央视网）、北京交通费单独报销，不计入取现</span></div>`:''}</div></div>`;
+                contentEl.innerHTML += `<div class="bg-white border rounded-lg p-4 space-y-3"><h3 class="font-bold text-gray-700 mb-2">取现面板（自营）</h3><div class="space-y-2 text-sm"><div class="flex justify-between"><span>制作费合同额：</span><span class="font-semibold">${formatMoney(project.budget_production)}</span></div><div class="flex justify-between items-center"><span>签约服务费：</span><span class="cursor-pointer text-blue-600 hover:underline" onclick="editServiceFee('${project.id}')">${project.contract_service_fee!==null?formatMoney(project.contract_service_fee):'点击填写'}</span></div><div class="flex justify-between"><span>制作费支出（含运营费用）：</span><span class="font-semibold text-red-600">${formatMoney(prodUsed)}</span></div><div class="text-xs text-gray-400 ml-2">↳ 制作费 ${formatMoney(prodOnlyUsed)} + 运营费用 ${formatMoney(cameraUsed)}</div><div class="pt-2 border-t flex justify-between text-base"><span class="font-bold">应取现金额：</span><span class="font-bold ${cashOut>=0?'text-green-600':'text-red-600'}">${project.contract_service_fee!==null?formatMoney(cashOut):'待填写签约服务费'}</span></div>${project.contract_service_fee!==null?`<div class="flex justify-between text-sm text-gray-500"><span>差旅（央视网）、北京交通费单独报销，不计入取现</span></div>`:''}</div></div>`;
             }
 
             if(project.type==='B') {
-                // B类：渠道费用（收入）+ 差旅摄像（支出）均从制作费里出
+                // B类（共建）：运营费用（垫付）+ 渠道费用（收入）均由合作方从制作费中支付给岳汀
                 const channelFeeExps = exps.filter(e=>e.category==='channel_fee');
-                const pendingExps = exps.filter(e=>e.category!=='channel_fee'&&e.invoice_received&&e.paid&&!e.reimbursed_from_vendor);
-                const completedExps = exps.filter(e=>e.category!=='channel_fee'&&e.invoice_received&&e.paid&&e.reimbursed_from_vendor);
-                const totalPending = pendingExps.reduce((s,e)=>s+e.amount,0);
+                const pendingToMe = exps.filter(e=>(e.category==='travel_camera'||e.category==='channel_fee')&&e.invoice_received&&e.paid&&!e.reimbursed_to_me);
+                const reimbursedToMe = exps.filter(e=>(e.category==='travel_camera'||e.category==='channel_fee')&&e.reimbursed_to_me);
+                const totalPendingToMe = pendingToMe.reduce((s,e)=>s+e.amount,0);
+                const totalReimbursedToMe = reimbursedToMe.reduce((s,e)=>s+e.amount,0);
 
-                // 制作费使用情况（不含渠道费用）
-                const prodNetUsed = prodUsed; // 差旅摄像已包含在内
-                const netIncome = channelFeeReceived - cameraUsed; // 净收益 = 渠道费用 - 差旅摄像
+                // 净收益 = 渠道费用 + 运营费用（两者都是合作方应付给岳汀的）
+                const netIncome = channelFeeReceived + cameraUsed;
 
-                let html = `<div class="bg-white border rounded-lg p-4"><h3 class="font-bold text-gray-700 mb-2">制作费分配（B类）</h3>`;
+                let html = `<div class="bg-white border rounded-lg p-4"><h3 class="font-bold text-gray-700 mb-2">制作费分配（共建）</h3>`;
                 html += `<div class="p-3 bg-blue-50 rounded-lg mb-3 text-sm space-y-1">`;
                 html += `<div class="flex justify-between"><span>制作费预算：</span><span class="font-semibold">${formatMoney(project.budget_production)}</span></div>`;
                 html += `<div class="flex justify-between"><span>💰 渠道费用（已收）：</span><span class="text-green-600 font-bold">+${formatMoney(channelFeeReceived)}</span></div>`;
-                html += `<div class="flex justify-between"><span>📷 差旅摄像（已垫付）：</span><span class="text-red-600">-${formatMoney(cameraUsed)}</span></div>`;
-                html += `<div class="flex justify-between border-t pt-1 mt-1"><span class="font-medium">渠道净收益：</span><span class="font-bold ${netIncome>=0?'text-green-600':'text-red-600'}">${formatMoney(netIncome)}</span></div>`;
+                html += `<div class="flex justify-between"><span>📷 运营费用（已垫付）：</span><span class="text-green-600 font-bold">+${formatMoney(cameraUsed)}</span></div>`;
+                html += `<div class="flex justify-between border-t pt-1 mt-1"><span class="font-medium">待报销给我合计：</span><span class="font-bold ${totalPendingToMe>0?'text-orange-600':'text-green-600'}">${formatMoney(totalPendingToMe)}</span></div>`;
+                html += `<div class="flex justify-between"><span class="font-medium">已报销给我合计：</span><span class="font-bold text-green-600">${formatMoney(totalReimbursedToMe)}</span></div>`;
                 html += `</div>`;
 
                 // 渠道费用收入记录
                 if(channelFeeExps.length>0) {
                     html += `<h4 class="text-sm font-semibold mb-2">渠道费用收入记录</h4><div class="space-y-1 mb-3">`;
                     channelFeeExps.forEach(e=>{
-                        html += `<div class="border rounded p-2 text-sm flex justify-between"><div>${e.date} 💰 ${e.description||'无备注'}</div><div class="font-bold text-green-600">+${formatMoney(e.amount)}</div></div>`;
+                        html += `<div class="border rounded p-2 text-sm flex justify-between"><div>${e.date}  ${e.description||'无备注'}</div><div class="font-bold text-green-600">+${formatMoney(e.amount)}</div></div>`;
                     });
                     html += `</div>`;
                 }
 
-                html += `<h4 class="text-sm font-semibold mb-2">待向制作方报销（${pendingExps.length}笔）</h4>`;
-                if(pendingExps.length>0) {
-                    html += `<div class="mb-2 p-2 bg-orange-50 rounded text-sm"><span class="font-medium">总待报销：</span><span class="text-orange-600 font-bold">${formatMoney(totalPending)}</span></div>`;
+                // 待报销给我列表（运营费用 + 渠道费用）
+                html += `<h4 class="text-sm font-semibold mb-2">待报销给我（${pendingToMe.length}笔）</h4>`;
+                if(pendingToMe.length>0) {
+                    html += `<div class="mb-2 p-2 bg-orange-50 rounded text-sm"><span class="font-medium">总待报销：</span><span class="text-orange-600 font-bold">${formatMoney(totalPendingToMe)}</span></div>`;
                     html += `<div class="space-y-2 mb-3">`;
-                    pendingExps.forEach(e => {
-                        html += `<div class="border rounded p-2 text-sm flex justify-between items-center"><div><div class="font-medium">${e.date} ${getCategoryIcon(e.category)} ${getCategoryLabel(e.category)}</div><div class="text-gray-600">${e.description||'无备注'}</div></div><div class="text-right"><div class="font-bold text-red-600">${formatMoney(e.amount)}</div><button onclick="markReimbursed('${e.id}')" class="text-xs bg-blue-600 text-white px-2 py-1 rounded mt-1 hover:bg-blue-700">标记已报销</button></div></div>`;
+                    pendingToMe.forEach(e => {
+                        const isChannelFee = e.category === 'channel_fee';
+                        html += `<div class="border rounded p-2 text-sm flex justify-between items-center"><div><div class="font-medium">${e.date} ${getCategoryIcon(e.category)} ${getCategoryLabel(e.category)}</div><div class="text-gray-600">${e.description||'无备注'}</div></div><div class="text-right"><div class="font-bold text-green-600">+${formatMoney(e.amount)}</div><button onclick="markReimbursedToMe('${e.id}')" class="text-xs bg-blue-600 text-white px-2 py-1 rounded mt-1 hover:bg-blue-700">标记已报销给我</button></div></div>`;
                     });
                     html += `</div>`;
                 } else {
                     html += `<div class="text-sm text-gray-400 mb-3">暂无待报销记录</div>`;
                 }
-                if(completedExps.length>0) {
-                    html += `<details class="mt-2"><summary class="cursor-pointer text-sm text-gray-600 hover:text-gray-800">已完成报销历史 (${completedExps.length}笔)</summary><div class="mt-2 space-y-2">${completedExps.map(e=>`<div class="border rounded p-2 text-sm flex justify-between"><div>${e.date} ${getCategoryIcon(e.category)} ${getCategoryLabel(e.category)}</div><div class="font-semibold">${formatMoney(e.amount)}</div></div>`).join('')}</div></details>`;
+                if(reimbursedToMe.length>0) {
+                    html += `<details class="mt-2"><summary class="cursor-pointer text-sm text-gray-600 hover:text-gray-800">已完成报销历史 (${reimbursedToMe.length}笔)</summary><div class="mt-2 space-y-2">${reimbursedToMe.map(e=>`<div class="border rounded p-2 text-sm flex justify-between"><div>${e.date} ${getCategoryIcon(e.category)} ${getCategoryLabel(e.category)}</div><div class="font-semibold text-green-600">+${formatMoney(e.amount)}</div></div>`).join('')}</div></details>`;
                 }
                 html += `</div>`;
                 contentEl.innerHTML += html;
@@ -901,6 +904,12 @@
             const data = getData();
             const e = data.expenses.find(x=>x.id===eid);
             if(e) { e.reimbursed_from_vendor=true; saveData(data); renderProjectDetail(e.project_id); alert('已标记为已向制作方报销'); }
+        }
+
+        function markReimbursedToMe(eid) {
+            const data = getData();
+            const e = data.expenses.find(x=>x.id===eid);
+            if(e) { e.reimbursed_to_me=true; saveData(data); renderProjectDetail(e.project_id); alert('已标记为已报销给我'); }
         }
 
         function deleteExpense(eid) {
