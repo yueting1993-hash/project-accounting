@@ -119,53 +119,21 @@
             </div>
         </div>
 
-        <!-- 页面4：打车规划 -->
-        <div id="page-taxi" class="page">
-            <div class="bg-gray-900 text-white p-6"><h1 class="text-2xl font-bold">打车规划</h1></div>
+                <!-- 页面4：录入记录 -->
+        <div id="page-log" class="page">
+            <div class="bg-gray-900 text-white p-6"><h1 class="text-2xl font-bold">录入记录</h1></div>
             <div class="p-4 space-y-4">
-                <div class="bg-gray-50 p-4 rounded-lg space-y-3">
-                    <h3 class="font-semibold text-gray-700">行程信息</h3>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">日期</label><input type="date" id="taxi-date" onchange="generateTaxiSuggestion()"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">时间</label><input type="time" id="taxi-time" onchange="generateTaxiSuggestion()"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">起点</label><input type="text" id="taxi-from" placeholder="如：望海楼（公司）" list="taxi-from-list" onchange="generateTaxiSuggestion()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"><datalist id="taxi-from-list"></datalist></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">终点</label><input type="text" id="taxi-to" placeholder="如：融创亦庄壹号（家）" list="taxi-to-list" onchange="generateTaxiSuggestion()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"><datalist id="taxi-to-list"></datalist></div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">预估金额</label><input type="text" id="taxi-amount" placeholder="0.00 或 120+80" onblur="evalAmount(this)" onchange="generateTaxiSuggestion()" inputmode="decimal"></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">里程（公里）</label><input type="number" id="taxi-mileage" placeholder="0.0" step="0.1" min="0" inputmode="decimal" oninput="suggestDestinationByMileage()" onchange="suggestDestinationByMileage()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
-                    </div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">备注（详细理由）</label><textarea id="taxi-note" placeholder="例如：拜访客户张三，讨论Q3合作方案" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea></div>
-                </div>
-                <div id="taxi-suggestion" class="bg-blue-50 p-4 rounded-lg space-y-3 hidden">
-                    <h3 class="font-semibold text-blue-800">智能建议</h3>
-                    <div class="space-y-2 text-sm">
-                        <div><span class="font-medium">规则判断：</span><span id="taxi-rule-text"></span></div>
-                        <div><span class="font-medium">推荐路线：</span><span id="taxi-route-text"></span></div>
-                        <div><span class="font-medium">报销理由：</span><span id="taxi-reason-text"></span></div>
-                        <div id="taxi-candidates-container" class="hidden">
-                            <div class="font-medium mb-1">推荐地点（点击选择）：</div>
-                            <div id="taxi-candidates" class="flex flex-wrap gap-2"></div>
-                        </div>
-                        <div><span class="font-medium">推荐分配项目：</span><select id="taxi-project-select" class="mt-1 w-full"><option value="">请选择项目</option></select></div>
-                    </div>
-                    <div class="pt-2"><label class="flex items-center"><input type="checkbox" id="taxi-is-workday" checked class="mr-2" onchange="generateTaxiSuggestion()"><span class="text-sm">视为工作日（可手动调整）</span></label></div>
-                    <button onclick="confirmTaxiEntry()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition mt-2">确认录入</button>
-                </div>
                 <div class="bg-white border rounded-lg p-4">
-                    <div class="flex justify-between items-center mb-3 cursor-pointer" onclick="toggleTaxiHistory()">
-                        <h3 class="font-semibold text-gray-700">📋 全部打车记录（点击展开/收起）</h3>
-                        <span id="taxi-history-count" class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">0条</span>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-semibold text-gray-700">全部录入记录</h3>
+                        <span id="log-count" class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">0条</span>
                     </div>
-                    <div id="taxi-history-panel" class="hidden space-y-2 max-h-64 overflow-y-auto"></div>
-                </div>
-                <div class="bg-white border rounded-lg p-4">
-                    <div class="flex justify-between items-center mb-3"><h3 class="font-semibold text-gray-700">常用路线记录</h3><button onclick="showAddRouteModal()" class="text-blue-600 text-sm hover:underline">+ 新增</button></div>
-                    <div id="taxi-routes-list" class="space-y-2"></div>
-                    <button onclick="exportTaxiExcel()" class="w-full mt-3 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition text-sm">📊 导出打车数据 Excel</button>
+                    <div id="log-list" class="space-y-2 max-h-[60vh] overflow-y-auto"></div>
                 </div>
             </div>
         </div>
 
-        <!-- 页面5：设置 -->
+<!-- 页面5：设置 -->
         <div id="page-settings" class="page">
             <div class="bg-gray-900 text-white p-6"><h1 class="text-2xl font-bold">设置</h1></div>
             <div class="p-4 space-y-6">
@@ -196,7 +164,7 @@
                 <button onclick="showPage('overview')" class="nav-item flex flex-col items-center p-2 active" data-page="overview"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg><span class="text-xs mt-1">总览</span></button>
                 <button onclick="showPage('detail')" class="nav-item flex flex-col items-center p-2" data-page="detail"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><span class="text-xs mt-1">详情</span></button>
                 <button onclick="showPage('entry')" class="nav-item flex flex-col items-center p-2" data-page="entry"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg><span class="text-xs mt-1">录入</span></button>
-                <button onclick="showPage('taxi')" class="nav-item flex flex-col items-center p-2" data-page="taxi"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg><span class="text-xs mt-1">打车</span></button>
+                <button onclick="showPage('log')" class="nav-item flex flex-col items-center p-2" data-page="log"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><span class="text-xs mt-1">录入记录</span></button>
                 <button onclick="showPage('settings')" class="nav-item flex flex-col items-center p-2" data-page="settings"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span class="text-xs mt-1">设置</span></button>
             </div>
         </div>
@@ -236,21 +204,6 @@
                     <div id="add-project-episodes-container" class="hidden"><label class="block text-sm font-medium text-gray-700 mb-1">集数（B类）</label><input type="number" id="add-project-episodes" min="1"></div>
                 </div>
                 <div class="flex gap-2 mt-6"><button type="button" onclick="closeModal('add-project-modal')" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">取消</button><button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">创建</button></div>
-            </form>
-        </div>
-    </div>
-
-    <div id="add-route-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 class="text-xl font-bold mb-4">新增常用路线</h3>
-            <form id="add-route-form" onsubmit="handleAddRouteSubmit(event)">
-                <div class="space-y-3">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">起点</label><input type="text" id="add-route-from" required></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">终点</label><input type="text" id="add-route-to" required></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">预估金额</label><input type="number" id="add-route-amount" step="0.01" min="0" required></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">报销理由</label><input type="text" id="add-route-reason" required></div>
-                </div>
-                <div class="flex gap-2 mt-6"><button type="button" onclick="closeModal('add-route-modal')" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">取消</button><button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">保存</button></div>
             </form>
         </div>
     </div>
@@ -389,7 +342,6 @@
             {name:"《Aging China》-样片",type:"A",budget_production:179000,budget_travel_cctv:21150,budget_transport:1350},
             {name:"《中邮保险7.8宣传日》",type:"A",budget_production:70000,budget_travel_cctv:0,budget_transport:0}
         ];
-        const INITIAL_TAXI_ROUTES = [{from:"望海楼（北京市海淀区西三环中路10号）",to:"融创亦庄壹号",amount:110,reason:"加班回家"}];
 
         // ==================== 云端数据层（GitHub Gist API）====================
         // Token 和 Gist ID 存在 localStorage，不硬编码在代码里（安全）
@@ -515,7 +467,6 @@
             return {
                 projects: INITIAL_PROJECTS.map(p=>({id:generateUUID(),...p,contract_service_fee:null,archived:false,created_at:new Date().toISOString()})),
                 expenses: [],
-                taxiRoutes: INITIAL_TAXI_ROUTES.map(r=>({id:generateUUID(),...r}))
             };
         }
 
@@ -598,7 +549,7 @@
             document.querySelector(`[data-page="${name}"]`).classList.add('active');
             if(name==='overview') renderOverview();
             if(name==='entry') initEntryForm();
-            if(name==='taxi') initTaxiPage();
+            if(name==='log') renderLogList();
             if(name==='settings') renderSettingsProjects();
             if(name==='detail') { if(currentProjectId) renderProjectDetail(currentProjectId); else renderAlerts(); }
         }
@@ -1164,551 +1115,39 @@
             alert('录入成功！');
         }
 
-        // 以望海楼（西三环中路10号）为中心的结构化路线数据库
-        // 里程为实际打车里程，地点经过真实地理位置校准
-        const ROUTE_DATABASE = {
-            5: {
-                home: ['紫竹院小区', '甘家口小区', '蓝旗营小区', '万泉河路小区'],
-                work: ['国家图书馆', '白石桥路', '中关村南大街', '首都体育馆']
-            },
-            7: {
-                home: ['德胜门小区', '牡丹园小区', '知春里', '北太平庄'],
-                work: ['西直门交通枢纽', '北京动物园', '新街口大街', '积水潭医院']
-            },
-            9: {
-                home: ['知春路小区', '健翔桥附近', '花园路小区', '北苑路小区'],
-                work: ['中关村北大街', '北航周边', '学院路', '清华东路']
-            },
-            11: {
-                home: ['石景山古城', '鲁谷社区', '安贞里', '惠新里'],
-                work: ['石景山万达', '安贞桥商圈', '奥体中心南', '北辰购物中心']
-            },
-            13: {
-                home: ['三里屯附近', '工体北路', '亚运村', '回龙观南区'],
-                work: ['三里屯太古里', '工人体育场', '国家会议中心', '奥林匹克公园']
-            },
-            15: {
-                home: ['朝阳公园西', '丰台科技园附近', '六里桥小区', '南三环小区'],
-                work: ['朝阳公园东', '丰台科技园', '北京西站周边', '六里桥客运站']
-            },
-            17: {
-                home: ['大望路小区', '双井小区', '劲松社区', '潘家园小区'],
-                work: ['大望路商务区', '双井商业街', '国贸南区', '劲松商业区']
-            },
-            19: {
-                home: ['国贸附近小区', '双桥小区', '传媒大学周边', '四惠小区'],
-                work: ['国贸CBD', '中国尊', '建外SOHO', '四惠交通枢纽']
-            },
-            21: {
-                home: ['青年路小区', '高碑店小区', '百子湾', '管庄东区'],
-                work: ['青年路商业街', '高碑店家具城', '通惠河北岸', '朝阳东坝']
-            },
-            23: {
-                home: ['望京西区', '来广营小区', '望京南区', '大兴旧宫北'],
-                work: ['望京SOHO', '望京科技园', '来广营商业', '旧宫商业中心']
-            },
-            25: {
-                home: ['沙河镇住宅', '昌平南邵', '大兴旧宫', '大兴清源路小区'],
-                work: ['沙河高教园', '昌平科技园南', '大兴工业园北', '大兴生物医药基地北']
-            },
-            27: {
-                home: ['亦庄北区住宅', '通州北苑', '常营住宅区', '大兴黄村北'],
-                work: ['亦庄开发区北', '通州北苑商业', '常营商业中心', '大兴黄村商业北']
-            },
-            29: {
-                home: ['亦庄核心区住宅', '通州梨园', '大兴黄村', '顺义仁和南'],
-                work: ['亦庄经济开发区', '通州梨园商业', '大兴黄村商业', '亦庄路科技园']
-            },
-            31: {
-                home: ['大兴黄村南', '通州次渠', '顺义仁和镇', '亦庄南区住宅'],
-                work: ['通州万达广场', '顺义仁和工业区', '次渠商业区', '亦庄南区产业园']
-            },
-            33: {
-                home: ['大兴西红门', '通州台湖', '顺义马坡', '大兴新城北'],
-                work: ['西红门荟聚', '台湖演艺小镇', '马坡工业区', '大兴新城商业']
-            },
-            35: {
-                home: ['大兴新城住宅', '昌平城区', '顺义牛栏山', '通州漷县'],
-                work: ['大兴新城商业中心', '昌平科技园', '牛栏山工业区', '漷县商业区']
-            },
-            37: {
-                home: ['顺义后沙峪', '通州城区', '昌平北七家', '大兴天宫院'],
-                work: ['后沙峪商业区', '通州运河商务区', '北七家科技园', '天宫院商业']
-            },
-            39: {
-                home: ['顺义城区南', '大兴天宫院南', '通州台湖南', '怀柔庙城'],
-                work: ['顺义工业区', '大兴新机场北', '通州台湖商业', '怀柔工业区']
-            },
-            41: {
-                home: ['顺义城区', '通州漷县镇', '怀柔城区', '密云溪翁庄'],
-                work: ['首都机场T3周边', '通州漷县商业', '怀柔科技城南', '密云经济开发区南']
-            },
-            43: {
-                home: ['密云城区', '顺义木林镇', '怀柔城区北', '平谷马坊'],
-                work: ['密云经济开发区', '顺义空港物流', '怀柔雁栖湖', '平谷工业区']
-            },
-            45: {
-                home: ['延庆城区', '密云北区', '平谷城区', '怀柔北区'],
-                work: ['延庆经济开发区', '密云古北口', '平谷金海湖', '怀柔北部']
-            }
-        };
-
-        // 北京市内常用地点库（基于规则和学习）
-        const BEIJING_LOCATIONS = {
-            office: ['望海楼（北京市海淀区西三环中路10号）'],
-            home: ['融创亦庄壹号', '金茂府（大兴区）', '中海寰宇天下'],
-            cultural_park: ['798艺术区', '首钢园', '郎园Station', '红砖美术馆'],
-            industrial_park: ['中关村软件园', '上地信息产业基地', '亦庄经济技术开发区', '酒仙桥电子城'],
-            building: ['国贸大厦', '中国尊', '银泰中心', '东方广场', '金融街中心'],
-            soe: ['中石油大厦', '中石化大厦', '国家电网总部', '中国移动大厦', '中国电信大厦']
-        };
-
-        // 基于历史报销数据学习的个人常用路线库（岳汀）
-        // 数据来源：6份日常交通报销单（2025-10 ~ 2026-06），共 70+ 条打车记录
-        const PERSONAL_ROUTE_HISTORY = [
-            // === 高频路线：望海楼 ↔ 融创亦庄壹号（加班回家，约110-130元，20:30后） ===
-            { from: '望海楼', to: '融创亦庄壹号', amount: 115, type: 'home', reason: '加班后回家', timeRule: 'weekday_after_2030', frequency: 12 },
-            { from: '融创亦庄壹号', to: '望海楼', amount: 118, type: 'work', reason: '周末/节假日到公司加班', timeRule: 'weekend', frequency: 3 },
-
-            // === 高频路线：望海楼 ↔ 景阳商务大厦（剪辑/后期，约35元） ===
-            { from: '望海楼', to: '景阳商务大厦', amount: 35, type: 'work', reason: '外出机房剪辑/后期制作', timeRule: 'workday_daytime', frequency: 5 },
-            { from: '景阳商务大厦', to: '望海楼', amount: 36, type: 'work', reason: '剪辑后回公司', timeRule: 'workday_daytime', frequency: 3 },
-
-            // === 高频路线：望海楼 ↔ 北京大学/清华大学（拜访专家，约30-56元） ===
-            { from: '望海楼', to: '北京大学西南门', amount: 28, type: 'work', reason: '拜访北大教授/专家', timeRule: 'workday_daytime', frequency: 3 },
-            { from: '北京大学西南门', to: '望海楼', amount: 30, type: 'work', reason: '拜访后返回公司', timeRule: 'workday_daytime', frequency: 2 },
-            { from: '望海楼', to: '清华大学东门', amount: 36, type: 'work', reason: '邀约清华专家参与节目', timeRule: 'workday_daytime', frequency: 2 },
-
-            // === 高频路线：望海楼 ↔ 华夏基金（约50元） ===
-            { from: '望海楼', to: '华夏基金管理有限公司', amount: 52, type: 'work', reason: '前往华夏基金沟通项目', timeRule: 'workday_daytime', frequency: 2 },
-            { from: '华夏基金公司', to: '望海楼', amount: 49, type: 'work', reason: '沟通后返回公司', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 高频路线：望海楼 ↔ 中储粮集团大厦（约19元） ===
-            { from: '望海楼', to: '中储粮集团大厦', amount: 19, type: 'work', reason: '洽谈中储粮联动项目', timeRule: 'workday_daytime', frequency: 2 },
-            { from: '中储粮集团大厦', to: '望海楼', amount: 17, type: 'work', reason: '洽谈后返回公司', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 望海楼 ↔ 快手元中心（约56元） ===
-            { from: '望海楼', to: '快手元中心', amount: 56, type: 'work', reason: '前往快手开会沟通合作', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 望海楼 ↔ 中国传媒大学（约77元） ===
-            { from: '望海楼', to: '中国传媒大学', amount: 77, type: 'work', reason: '拜访传媒大学专家', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 望海楼 ↔ 首都机场（约126元） ===
-            { from: '望海楼', to: '首都机场', amount: 126, type: 'work', reason: '到机场接活动嘉宾', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 望海楼 ↔ 北辰荟（约45-157元，腾讯活动） ===
-            { from: '望海楼', to: '北辰荟', amount: 50, type: 'work', reason: '外出活动场地踩点/彩排', timeRule: 'workday_daytime', frequency: 3 },
-            { from: '北辰荟', to: '望海楼', amount: 50, type: 'work', reason: '活动后返回公司', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '北辰荟', to: '融创亦庄壹号', amount: 132, type: 'home', reason: '活动彩排后回家（晚归）', timeRule: 'any_after_2000', frequency: 1 },
-
-            // === 望海楼 ↔ 数字北京大厦（约43元） ===
-            { from: '望海楼', to: '数字北京大厦', amount: 43, type: 'work', reason: '外出邀约合作企业', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 望海楼 ↔ 东方金叶文创园（约69元） ===
-            { from: '望海楼', to: '东方金叶文创园', amount: 69, type: 'work', reason: '与供应商洽谈合作', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 望海楼 ↔ 机器人产业园（约119元） ===
-            { from: '望海楼', to: '北京市机器人产业园', amount: 119, type: 'work', reason: '拜访机器人行业客户', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '北京市机器人产业园', to: '望海楼', amount: 111, type: 'work', reason: '拜访后返回公司', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 望海楼 ↔ 未来科学城（约130元） ===
-            { from: '望海楼', to: '未来科学城一期', amount: 130, type: 'work', reason: '外出拜访粮食行业客户', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 望海楼 ↔ 望京SOHO（约112元） ===
-            { from: '融创亦庄壹号', to: '望京SOHO', amount: 112, type: 'work', reason: '周末取设备+拜访合作方', timeRule: 'weekend', frequency: 1 },
-
-            // === 望海楼 ↔ 中粮营养健康研究院（约151元） ===
-            { from: '望海楼', to: '中粮营养健康研究院', amount: 151, type: 'work', reason: '拜访科技养老项目合作方', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 望海楼 ↔ 国家图书馆（约19元） ===
-            { from: '望海楼', to: '中国国家图书馆', amount: 19, type: 'work', reason: '沟通线下沙龙活动', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 望海楼 ↔ 传导空间（约60元） ===
-            { from: '望海楼', to: '传导空间', amount: 60, type: 'work', reason: '参与拍摄对象发布会', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 外出后回公司（高频模式） ===
-            { from: '太阳名车', to: '望海楼', amount: 76, type: 'work', reason: '外出拍摄后回公司', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '中国人民大学', to: '望海楼', amount: 20, type: 'work', reason: '拍摄后回公司', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '自空间', to: '望海楼', amount: 57, type: 'work', reason: '参加发布会后回公司', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '北京安贞环宇荟', to: '望海楼', amount: 51, type: 'work', reason: '洽谈合作后回公司', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '芳园里', to: '望海楼', amount: 63, type: 'work', reason: '活动踩点后回公司', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '城市会客厅大厦', to: '望海楼', amount: 104, type: 'work', reason: '拜访专家后回公司', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '天和景园', to: '望海楼', amount: 35, type: 'work', reason: '补拍素材后回公司', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '中经云数据存储', to: '望海楼', amount: 88, type: 'work', reason: '拜访客户后回公司', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 加班回家（非融创亦庄壹号目的地） ===
-            { from: '望海楼', to: '蒲黄榆', amount: 50, type: 'home', reason: '加班后回家', timeRule: 'weekday_after_2030', frequency: 3 },
-            { from: '望海楼', to: '光辉南里小区', amount: 49, type: 'home', reason: '加班后回家', timeRule: 'weekday_after_2030', frequency: 2 },
-            { from: '望海楼', to: '三丰里社区', amount: 47, type: 'home', reason: '加班后回家', timeRule: 'weekday_after_2030', frequency: 1 },
-            { from: '望海楼', to: '铭科苑', amount: 58, type: 'home', reason: '加班后回家', timeRule: 'weekday_after_2030', frequency: 1 },
-            { from: '望海楼', to: '万方家园', amount: 102, type: 'home', reason: '加班后回家', timeRule: 'weekday_after_2030', frequency: 1 },
-
-            // === 晚间外出后直接回家（非望海楼出发） ===
-            { from: '畅春园', to: '融创亦庄壹号', amount: 141, type: 'home', reason: '外出拍摄后直接回家（晚归）', timeRule: 'any_after_2000', frequency: 1 },
-            { from: '快手元中心', to: '融创亦庄壹号', amount: 154, type: 'home', reason: '外出开会后直接回家（晚归）', timeRule: 'any_after_2000', frequency: 1 },
-            { from: '清华大学东门', to: '融创亦庄壹号', amount: 138, type: 'home', reason: '拜访嘉宾后直接回家（晚归）', timeRule: 'any_after_2000', frequency: 1 },
-
-            // === 周末加班往返 ===
-            { from: '紫耀大厦', to: '望海楼', amount: 71, type: 'work', reason: '周末前往公司加班', timeRule: 'weekend', frequency: 1 },
-            { from: '望海楼', to: '蒲黄榆地铁站', amount: 49, type: 'home', reason: '周末加班后回家', timeRule: 'weekend', frequency: 1 },
-            { from: '望海楼', to: '阜成门地铁站', amount: 210, type: 'home', reason: '周末加班后回家', timeRule: 'weekend', frequency: 1 },
-
-            // === 工作日外出办公（起点非望海楼） ===
-            { from: '西直门凯德MALL', to: '望海楼', amount: 36, type: 'work', reason: '与供应商沟通后回公司', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '京臻咖啡', to: '望海楼', amount: 43, type: 'work', reason: '拍摄后回公司', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '公主坟', to: '景阳商务大厦', amount: 35, type: 'work', reason: '外出邀约节目嘉宾', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '北京理工大学', to: '北京市机器人产业园', amount: 119, type: 'work', reason: '拜访专家及客户', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '东方金针文创园', to: 'SOHO嘉盛中心', amount: 29, type: 'work', reason: '拜访智慧养老专家', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '太古里北区', to: '望海楼', amount: 63, type: 'work', reason: '邀约专家后回公司', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '物华大厦', to: '望海楼', amount: 20, type: 'work', reason: '拜访嘉宾后回公司', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 连续踩点/转场（非望海楼出发） ===
-            { from: '北辰荟', to: '朝阳合生汇', amount: 65, type: 'work', reason: '年度活动场地踩点转场', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '景阳商务大厦', to: '天和景园', amount: 13, type: 'work', reason: '补拍外景转场', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '北京大学西南门', to: '清华大学东门', amount: 26, type: 'work', reason: '连续拜访专家转场', timeRule: 'workday_daytime', frequency: 1 },
-
-            // === 特殊路线 ===
-            { from: '望海楼', to: '朗丽兹太和府酒店', amount: 157, type: 'work', reason: '途经酒店接嘉宾参加活动', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '武影器材租赁', to: '朝阳园', amount: 19, type: 'home', reason: '拍摄结束后回家（深夜）', timeRule: 'any_after_2200', frequency: 1 },
-            { from: '京市口袋站', to: '望海楼', amount: 29, type: 'work', reason: '拍摄后回公司整理素材', timeRule: 'workday_daytime', frequency: 1 },
-            { from: '中国航天博物馆', to: '富凯大厦', amount: 71, type: 'work', reason: '周末邀约节目嘉宾转场', timeRule: 'weekend', frequency: 1 },
-            { from: '机器人产业园', to: '中国航天博物馆', amount: 42, type: 'work', reason: '周末沟通企业转场', timeRule: 'weekend', frequency: 1 }
-        ];
-
-        // 根据当前输入匹配历史路线（返回匹配列表，按 frequency 降序）
-        function matchPersonalRoutes(fromInput, toInput, isWeekend, isAfter2030) {
-            const results = [];
-            const fromLower = (fromInput || '').toLowerCase();
-            const toLower = (toInput || '').toLowerCase();
-
-            for (const route of PERSONAL_ROUTE_HISTORY) {
-                let score = 0;
-                const rf = route.from.toLowerCase();
-                const rt = route.to.toLowerCase();
-
-                // 起点匹配
-                if (fromLower && rf.includes(fromLower)) score += 30;
-                else if (fromLower && fromLower.includes(rf)) score += 25;
-                // 终点匹配
-                if (toLower && rt.includes(toLower)) score += 30;
-                else if (toLower && toLower.includes(rt)) score += 25;
-                // 时间规则加分
-                if (isWeekend && route.timeRule === 'weekend') score += 15;
-                if (isAfter2030 && (route.timeRule === 'weekday_after_2030' || route.timeRule === 'any_after_2000' || route.timeRule === 'any_after_2200')) score += 15;
-                if (!isWeekend && !isAfter2030 && route.timeRule === 'workday_daytime') score += 10;
-                // 频率加分
-                score += Math.min(route.frequency, 10);
-
-                if (score > 0) results.push({ ...route, score });
-            }
-
-            results.sort((a, b) => b.score - a.score);
-            return results.slice(0, 5); // 最多返回5条
-        }
-
-        function initTaxiPage() {
-            document.getElementById('taxi-date').value = getToday();
-            renderTaxiRoutes();
-            updateTaxiProjectSelect();
-            populateLocationSuggestions();
-            renderTaxiHistory(); // 初始化时渲染今日已录入记录
-        }
-
-        // 填充起点终点下拉建议
-        function populateLocationSuggestions() {
-            const fromList = document.getElementById('taxi-from-list');
-            const toList = document.getElementById('taxi-to-list');
-            if (!fromList || !toList) return;
-
-            // 起点：公司 + 常用出发地
-            let fromOptions = [...BEIJING_LOCATIONS.office];
+        // ==================== 录入记录面板 ====================
+        function renderLogList() {
             const data = getData();
-            // 从历史打车记录中学习常用起点
-            const learnedFroms = new Set(data.expenses.filter(e => e.category === 'transport' && e.transport_route).map(e => {
-                const parts = e.transport_route.split('→');
-                return parts[0] ? parts[0].trim() : null;
-            }).filter(Boolean));
-            learnedFroms.forEach(loc => { if (!fromOptions.includes(loc)) fromOptions.push(loc); });
-
-            // 终点：家 + 文化园 + 产业园 + 大厦 + 央企 + 学习到的目的地
-            let toOptions = [...BEIJING_LOCATIONS.home, ...BEIJING_LOCATIONS.cultural_park, ...BEIJING_LOCATIONS.industrial_park, ...BEIJING_LOCATIONS.building, ...BEIJING_LOCATIONS.soe];
-            const learnedTos = new Set(data.expenses.filter(e => e.category === 'transport' && e.transport_route).map(e => {
-                const parts = e.transport_route.split('→');
-                return parts[1] ? parts[1].trim() : null;
-            }).filter(Boolean));
-            learnedTos.forEach(loc => { if (!toOptions.includes(loc)) toOptions.push(loc); });
-
-            fromList.innerHTML = fromOptions.map(l => `<option value="${l}">`).join('');
-            toList.innerHTML = toOptions.map(l => `<option value="${l}">`).join('');
-        }
-
-        // 根据里程+类型（回家/公干）从数据库推荐地点
-        function suggestByMileageAndType(mileage, type) {
-            if (!mileage || mileage <= 0) return [];
-            const keys = Object.keys(ROUTE_DATABASE).map(Number).sort((a,b) => a - b);
-            // 找最接近的里程段（优先精确匹配，其次±2公里内最近）
-            let closestKey = null, minDiff = Infinity;
-            for (const k of keys) {
-                const diff = Math.abs(k - mileage);
-                if (diff < minDiff) { minDiff = diff; closestKey = k; }
-            }
-            if (closestKey === null || minDiff > 5) return []; // 误差超过5km则不推荐
-            const segment = ROUTE_DATABASE[closestKey];
-            if (!segment) return [];
-            return type === 'home' ? segment.home : segment.work;
-        }
-
-        // 渲染候选地点按钮（供用户点击选择）
-        function renderCandidates(candidates, targetField) {
-            const container = document.getElementById('taxi-candidates-container');
-            const listEl = document.getElementById('taxi-candidates');
-            if (!candidates || candidates.length === 0) {
-                container.classList.add('hidden');
+            const exps = [...data.expenses].sort((a,b) => 
+                new Date(b.created_at||b.date) - new Date(a.created_at||b.date)
+            );
+            document.getElementById('log-count').textContent = `${exps.length}条`;
+            const el = document.getElementById('log-list');
+            if (exps.length === 0) {
+                el.innerHTML = '<div class="text-center text-gray-400 py-4">暂无录入记录</div>';
                 return;
             }
-            container.classList.remove('hidden');
-            listEl.innerHTML = candidates.map(name =>
-                `<button type="button" onclick="selectCandidate('${name.replace(/'/g,"\\'")}','${targetField}')"
-                    class="px-3 py-1 text-xs rounded-full border border-blue-400 text-blue-700 bg-white hover:bg-blue-100 transition">${name}</button>`
-            ).join('');
-        }
-
-        // 点击候选地点后填入对应字段并刷新建议
-        function selectCandidate(name, field) {
-            document.getElementById(field).value = name;
-            document.getElementById('taxi-candidates-container').classList.add('hidden');
-            generateTaxiSuggestion();
-        }
-
-        // 双向智能推荐：根据已知信息推断未知端
-        function suggestDestinationByMileage() {
-            const fromInput = document.getElementById('taxi-from').value.trim();
-            const toInput = document.getElementById('taxi-to').value.trim();
-            const mileage = parseFloat(document.getElementById('taxi-mileage').value);
-            const timeInput = document.getElementById('taxi-time').value;
-            
-            if (!mileage || mileage <= 0) return;
-
-            // 判断是回家还是公干
-            const isWorkday = document.getElementById('taxi-is-workday').checked;
-            let isHomeTime = false;
-            if (timeInput && isWorkday) {
-                const [h, m] = timeInput.split(':').map(Number);
-                isHomeTime = (h * 60 + m) >= 20 * 60 + 30;
-            }
-            const type = isHomeTime ? 'home' : 'work';
-            const OFFICE = BEIJING_LOCATIONS.office[0];
-
-            // 场景A：起点=望海楼，终点为空 → 推荐终点候选列表
-            if (fromInput.includes('望海楼') && !toInput) {
-                const candidates = suggestByMileageAndType(mileage, type);
-                if (candidates.length > 0) {
-                    generateTaxiSuggestion();
-                    renderCandidates(candidates, 'taxi-to');
-                }
-            }
-            // 场景B：终点=望海楼，起点为空 → 推荐起点候选列表
-            else if (toInput.includes('望海楼') && !fromInput) {
-                const candidates = suggestByMileageAndType(mileage, type);
-                if (candidates.length > 0) {
-                    generateTaxiSuggestion();
-                    renderCandidates(candidates, 'taxi-from');
-                }
-            }
-            // 场景C：终点在数据库中，起点为空 → 起点=望海楼
-            else if (toInput && !fromInput) {
-                let foundInDB = false;
-                for (const key in ROUTE_DATABASE) {
-                    const seg = ROUTE_DATABASE[key];
-                    if (seg.home.includes(toInput) || seg.work.includes(toInput)) { foundInDB = true; break; }
-                }
-                if (foundInDB) {
-                    document.getElementById('taxi-from').value = OFFICE;
-                    generateTaxiSuggestion();
-                }
-            }
-            // 场景D：起点在数据库中，终点为空 → 终点=望海楼
-            else if (fromInput && !toInput) {
-                let foundInDB = false;
-                for (const key in ROUTE_DATABASE) {
-                    const seg = ROUTE_DATABASE[key];
-                    if (seg.home.includes(fromInput) || seg.work.includes(fromInput)) { foundInDB = true; break; }
-                }
-                if (foundInDB) {
-                    document.getElementById('taxi-to').value = OFFICE;
-                    generateTaxiSuggestion();
-                }
-            }
-            // 场景E：起终点都为空，仅有里程 → 展示候选列表供选择
-            else if (!fromInput && !toInput) {
-                const candidates = suggestByMileageAndType(mileage, type);
-                if (candidates.length > 0) {
-                    generateTaxiSuggestion();
-                    renderCandidates(candidates, 'taxi-to');
-                }
-            }
-        }
-
-        // 切换今日已录入记录面板显示/隐藏
-        function toggleTaxiHistory() {
-            const panel = document.getElementById('taxi-history-panel');
-            panel.classList.toggle('hidden');
-        }
-
-        // 渲染全部打车记录
-        function renderTaxiHistory() {
-            const data = getData();
-            const allRecords = data.expenses.filter(e => e.category === 'transport' && !e.transport_reimbursed)
-                .sort((a, b) => (b.date + (b.time||'')).localeCompare(a.date + (a.time||'')));
-            
-            const countEl = document.getElementById('taxi-history-count');
-            const panelEl = document.getElementById('taxi-history-panel');
-            
-            countEl.textContent = `${allRecords.length}条`;
-            
-            if (allRecords.length === 0) {
-                panelEl.innerHTML = '<div class="text-center text-gray-400 py-2 text-sm">暂无打车记录</div>';
-                return;
-            }
-            
-            panelEl.innerHTML = allRecords.map(e => {
-                const p = data.projects.find(x => x.id === e.project_id);
-                return `<div class="border-l-2 border-blue-500 pl-3 py-1 text-sm">
-                    <div class="font-medium">${e.transport_route || '未填写路线'}</div>
-                    <div class="text-gray-600 text-xs mt-0.5">
-                        ${e.date} ${e.time || ''} | ${formatMoney(e.amount)}${e.mileage ? ' | ' + e.mileage + 'km' : ''}
-                        ${p ? ' | ' + p.name : ''}
+            el.innerHTML = exps.map(e => {
+                const p = data.projects.find(x=>x.id===e.project_id);
+                const createdAt = e.created_at ? new Date(e.created_at).toLocaleString('zh-CN', {
+                    month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
+                }) : e.date;
+                return `<div class="border rounded p-3 text-sm hover:bg-gray-50 cursor-pointer" 
+                    onclick="showPage('detail');currentProjectId='${e.project_id}';renderProjectDetail('${e.project_id}')">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="font-medium">${p?p.name:'未知项目'} 
+                                <span class="text-xs text-gray-500 ml-1">${createdAt}</span>
+                            </div>
+                            <div class="text-gray-600 mt-0.5">
+                                ${getCategoryIcon(e.category)} ${getCategoryLabel(e.category)} · ${formatMoney(e.amount)}
+                            </div>
+                            ${e.description ? `<div class="text-gray-500 text-xs mt-0.5">${e.description}</div>` : ''}
+                        </div>
+                        <span class="text-xs text-blue-500 ml-2 mt-1">→</span>
                     </div>
-                    ${e.taxi_note ? '<div class="text-gray-500 text-xs mt-0.5">' + e.taxi_note + '</div>' : ''}
                 </div>`;
             }).join('');
-        }
-
-        function renderTaxiRoutes() {
-            const data = getData();
-            const el = document.getElementById('taxi-routes-list');
-            el.innerHTML = '';
-            if(data.taxiRoutes.length===0) { el.innerHTML='<div class="text-center text-gray-500 py-2">暂无常用路线</div>'; return; }
-            data.taxiRoutes.forEach(r => {
-                const div = document.createElement('div');
-                div.className = 'border rounded p-2 text-sm';
-                div.innerHTML = `<div class="font-medium">${r.from} → ${r.to}</div><div class="text-gray-600 text-xs mt-1">金额：${formatMoney(r.amount)} | 理由：${r.reason}</div>`;
-                el.appendChild(div);
-            });
-        }
-
-        function updateTaxiProjectSelect() {
-            const data = getData();
-            const sel = document.getElementById('taxi-project-select');
-            sel.innerHTML = '<option value="">请选择项目</option>';
-            data.projects.filter(p=>!p.archived&&p.budget_transport>0).forEach(p => {
-                const used = data.expenses.filter(e=>e.project_id===p.id&&e.category==='transport').reduce((s,e)=>s+e.amount,0);
-                const rem = p.budget_transport-used;
-                if(rem>0) sel.innerHTML += `<option value="${p.id}">${p.name} (剩余${formatMoney(rem)})</option>`;
-            });
-        }
-
-        function generateTaxiSuggestion() {
-            const ds = document.getElementById('taxi-date').value;
-            const ts = document.getElementById('taxi-time').value;
-            const wd = document.getElementById('taxi-is-workday').checked;
-            const fromInput = document.getElementById('taxi-from').value.trim();
-            const toInput = document.getElementById('taxi-to').value.trim();
-            if(!ds||!ts) { document.getElementById('taxi-suggestion').classList.add('hidden'); return; }
-            document.getElementById('taxi-suggestion').classList.remove('hidden');
-            const [h,m] = ts.split(':').map(Number);
-            const tv = h*60+m;
-            let rule, route, reason;
-
-            // 优先使用用户手动输入的起终点
-            let from = fromInput;
-            let to = toInput;
-            const OFFICE = BEIJING_LOCATIONS.office[0];
-
-            // 判断方向：终点是望海楼=回程，起点是望海楼=出发
-            const toIsOffice = to.includes('望海楼');
-            const fromIsOffice = from.includes('望海楼');
-
-            if(wd) {
-                if(tv>=20*60+30) {
-                    rule='工作日 20:30后 - 加班回家';
-                    if (!from) from = toIsOffice ? '[出发地]' : OFFICE;
-                    if (!to) to = fromIsOffice ? '[回家地址]' : OFFICE;
-                    reason='加班回家';
-                } else {
-                    rule='工作日其他时段 - 外出办公';
-                    if (!from) from = toIsOffice ? '[出发地]' : OFFICE;
-                    if (!to) to = fromIsOffice ? '[目的地]' : OFFICE;
-                    reason='外出拜访/开会/前采';
-                }
-            } else {
-                rule='周末/节假日';
-                if (!from) from = toIsOffice ? '[出发地]' : '[公司地址]';
-                if (!to) to = fromIsOffice ? '[目的地]' : '[公司地址]';
-                reason='周末加班/紧急事务';
-            }
-
-            route = `${from} → ${to}`;
-            document.getElementById('taxi-rule-text').textContent = rule;
-            document.getElementById('taxi-route-text').textContent = route;
-            document.getElementById('taxi-reason-text').textContent = reason;
-
-            // 历史路线匹配：根据起终点+时间规则匹配个人历史路线
-            const isWeekend = !wd;
-            const isAfter2030 = wd && tv >= 20*60+30;
-            const matchedRoutes = matchPersonalRoutes(fromInput, toInput, isWeekend, isAfter2030);
-            if (matchedRoutes.length > 0) {
-                const best = matchedRoutes[0];
-                document.getElementById('taxi-amount').value = best.amount;
-                document.getElementById('taxi-reason-text').textContent = best.reason;
-                document.getElementById('taxi-from').value = best.from;
-                document.getElementById('taxi-to').value = best.to;
-                document.getElementById('taxi-route-text').textContent = `${best.from} → ${best.to}`;
-                // 显示匹配提示
-                const matchInfo = matchedRoutes.length > 1
-                    ? `已匹配 ${matchedRoutes.length} 条历史路线，已填入最佳匹配`
-                    : '已匹配历史路线';
-                document.getElementById('taxi-rule-text').textContent = rule + ' · ' + matchInfo;
-            }
-
-            updateTaxiProjectSelect();
-        }
-
-        function confirmTaxiEntry() {
-            const pid = document.getElementById('taxi-project-select').value;
-            const date = document.getElementById('taxi-date').value;
-            const time = document.getElementById('taxi-time').value;
-            const amt = parseFloat(document.getElementById('taxi-amount').value);
-            const mileage = parseFloat(document.getElementById('taxi-mileage').value) || 0;
-            const note = document.getElementById('taxi-note').value.trim();
-            if(!pid||!date||!time||!amt) { alert('请填写完整信息'); return; }
-            const route = document.getElementById('taxi-route-text').textContent;
-            const reason = document.getElementById('taxi-reason-text').textContent;
-            const data = getData();
-            data.expenses.push({
-                id:generateUUID(), project_id:pid, category:'transport', amount:amt, date:date, time:time, description:reason,
-                invoice_received:true, paid:true, reimbursed_from_vendor:false, reimbursed_to_me:false,
-                transport_route:route, mileage:mileage, taxi_note:note, created_at:new Date().toISOString()
-            });
-            saveData(data);
-            alert('打车费用已录入！');
-            document.getElementById('taxi-amount').value = '';
-            document.getElementById('taxi-mileage').value = '';
-            document.getElementById('taxi-note').value = '';
-            document.getElementById('taxi-suggestion').classList.add('hidden');
-            renderTaxiHistory(); // 录入成功后刷新今日记录面板
-        }
-
-        function showAddRouteModal() { document.getElementById('add-route-modal').classList.remove('hidden'); document.getElementById('add-route-modal').classList.add('flex'); }
-        function handleAddRouteSubmit(event) {
-            event.preventDefault();
-            const data = getData();
-            data.taxiRoutes.push({id:generateUUID(),from:document.getElementById('add-route-from').value,to:document.getElementById('add-route-to').value,amount:parseFloat(document.getElementById('add-route-amount').value),reason:document.getElementById('add-route-reason').value});
-            saveData(data);
-            closeModal('add-route-modal');
-            document.getElementById('add-route-form').reset();
-            renderTaxiRoutes();
-            alert('常用路线已添加');
         }
 
         function renderSettingsProjects() {
@@ -1848,7 +1287,7 @@
                     e.invoice_received ? '是' : '否',
                     e.paid ? '是' : '否',
                     e.reimbursed_from_vendor ? '是' : '否',
-                    e.transport_route || ''
+                    ''
                 ]);
             });
             const ws1 = XLSX.utils.aoa_to_sheet(expRows);
@@ -1882,30 +1321,6 @@
             XLSX.writeFile(wb, `项目记账_${getToday()}.xlsx`);
         }
 
-        function exportTaxiExcel() {
-            if (typeof XLSX === 'undefined') { alert('Excel 库加载中，请稍后再试'); return; }
-            const data = getData();
-            const wb = XLSX.utils.book_new();
-            const rows = [['日期','时间','项目','路线','里程(km)','金额','理由','备注']];
-            data.expenses.filter(e => e.category === 'transport').sort((a,b)=>a.date.localeCompare(b.date)).forEach(e => {
-                const p = data.projects.find(x=>x.id===e.project_id);
-                rows.push([
-                    e.date,
-                    e.time || '',
-                    p ? p.name : '未知项目',
-                    e.transport_route || '',
-                    e.mileage || '',
-                    e.amount,
-                    e.description || '',
-                    e.taxi_note || ''
-                ]);
-            });
-            const ws = XLSX.utils.aoa_to_sheet(rows);
-            ws['!cols'] = [{wch:12},{wch:8},{wch:22},{wch:35},{wch:10},{wch:10},{wch:25},{wch:20}];
-            XLSX.utils.book_append_sheet(wb, ws, '打车记录');
-            XLSX.writeFile(wb, `打车记录_${getToday()}.xlsx`);
-        }
-
         function importData(event) {
             const file = event.target.files[0];
             if(!file) return;
@@ -1914,7 +1329,7 @@
             reader.onload = function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
-                    if(data.projects&&data.expenses&&data.taxiRoutes) {
+                    if(data.projects&&data.expenses) {
                         saveData(data);
                         alert('数据导入成功');
                         location.reload();
