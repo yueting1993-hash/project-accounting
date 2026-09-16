@@ -123,6 +123,26 @@
         <div id="page-log" class="page">
             <div class="bg-gray-900 text-white p-6"><h1 class="text-2xl font-bold">录入记录</h1></div>
             <div class="p-4 space-y-4">
+                <!-- 筛选器 -->
+                <div class="bg-white border rounded-lg p-4 space-y-3">
+                    <div class="flex gap-3 flex-wrap">
+                        <div class="flex-1 min-w-[180px]">
+                            <label class="block text-xs text-gray-500 mb-1">按项目筛选</label>
+                            <select id="log-filter-project" onchange="renderLogList()" class="w-full text-sm border border-gray-300 rounded px-3 py-2">
+                                <option value="">全部项目</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[180px]">
+                            <label class="block text-xs text-gray-500 mb-1">按报销类型筛选</label>
+                            <select id="log-filter-category" onchange="renderLogList()" class="w-full text-sm border border-gray-300 rounded px-3 py-2">
+                                <option value="">全部类型</option>
+                                <option value="transport">🚗 北京交通费</option>
+                                <option value="travel_cctv">✈️ 差旅央视网</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- 记录列表 -->
                 <div class="bg-white border rounded-lg p-4">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="font-semibold text-gray-700">全部录入记录</h3>
@@ -1118,13 +1138,32 @@
         // ==================== 录入记录面板 ====================
         function renderLogList() {
             const data = getData();
-            const exps = [...data.expenses].sort((a,b) => 
-                new Date(b.created_at||b.date) - new Date(a.created_at||b.date)
-            );
+            
+            // 填充项目筛选下拉框（首次或数据变化时）
+            const projSelect = document.getElementById('log-filter-project');
+            if (projSelect.options.length <= 1) {
+                data.projects.filter(p => !p.archived).forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    projSelect.appendChild(opt);
+                });
+            }
+            
+            // 读取筛选条件
+            const filterProject = document.getElementById('log-filter-project').value;
+            const filterCategory = document.getElementById('log-filter-category').value;
+            
+            let exps = [...data.expenses];
+            if (filterProject) exps = exps.filter(e => e.project_id === filterProject);
+            if (filterCategory) exps = exps.filter(e => e.category === filterCategory);
+            
+            exps.sort((a,b) => new Date(b.created_at||b.date) - new Date(a.created_at||b.date));
+            
             document.getElementById('log-count').textContent = `${exps.length}条`;
             const el = document.getElementById('log-list');
             if (exps.length === 0) {
-                el.innerHTML = '<div class="text-center text-gray-400 py-4">暂无录入记录</div>';
+                el.innerHTML = '<div class="text-center text-gray-400 py-4">暂无匹配的录入记录</div>';
                 return;
             }
             el.innerHTML = exps.map(e => {
