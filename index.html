@@ -236,7 +236,7 @@
             <div class="space-y-3">
                 <div class="grid grid-cols-2 gap-3">
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">日期</label><input type="date" id="edit-expense-date" class="w-full border rounded px-3 py-2 text-sm"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">金额</label><input type="number" id="edit-expense-amount" step="0.01" min="0" class="w-full border rounded px-3 py-2 text-sm"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">金额</label><input type="text" id="edit-expense-amount" placeholder="0.00 或 120+80" onblur="evalAmount(this)" oninput="" inputmode="decimal" class="w-full border rounded px-3 py-2 text-sm"></div>
                 </div>
                 <div><label class="block text-sm font-medium text-gray-700 mb-1">备注/理由</label><input type="text" id="edit-expense-desc" class="w-full border rounded px-3 py-2 text-sm"></div>
                 <div class="border rounded p-3 space-y-2">
@@ -920,7 +920,21 @@
             const e = data.expenses.find(x=>x.id===eid);
             if(!e) return;
             e.date = document.getElementById('edit-expense-date').value;
-            e.amount = parseFloat(document.getElementById('edit-expense-amount').value) || e.amount;
+            const rawAmt = document.getElementById('edit-expense-amount').value.trim();
+            if (rawAmt && /^[\d\s\+\-\*\/\.\(\)]+$/.test(rawAmt)) {
+                try {
+                    const result = Function('"use strict"; return (' + rawAmt + ')')();
+                    if (typeof result === 'number' && isFinite(result) && result >= 0) {
+                        e.amount = parseFloat(result.toFixed(2));
+                    } else {
+                        e.amount = parseFloat(rawAmt) || e.amount;
+                    }
+                } catch(err) {
+                    e.amount = parseFloat(rawAmt) || e.amount;
+                }
+            } else {
+                e.amount = parseFloat(rawAmt) || e.amount;
+            }
             e.description = document.getElementById('edit-expense-desc').value;
             e.invoice_received = document.getElementById('edit-invoice-received').checked;
             e.paid = document.getElementById('edit-paid').checked;
